@@ -73,7 +73,7 @@ http://localhost:5173/
 
 ## ✅ What to Verify
 
-1. **Dashboard KPI Cards:** Review the 4 metric cards (Monitored Corridors, Regional Risk Index, Critical Hotspots, Est. Incident Mitigation).
+1. **Dashboard KPI Cards:** Review the 4 route-specific historical collision cards (Total Historical Accidents, Fatal Accidents, Verified Blackspots, Route Accident Risk Score).
 2. **Quick Test Scenarios:** Click buttons like **"Monsoon Highway (Night)"** or **"Winter Foggy Bypass (Dawn)"** to automatically fill the form.
 3. **Interactive Predictor:** Adjust speed sliders, weather, or road types, and click **"Evaluate Corridor Risk Index"** to see the score meter update dynamically.
 4. **Hotspot GIS Map:** Click on any hotspot marker (e.g. `HS-01`, `HS-02`) to view its coordinates, speed limit delta, and recommended remediation, or click **"Analyze in Predictor Form"**.

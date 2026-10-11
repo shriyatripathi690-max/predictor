@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Activity, 
-  Cpu, 
   Clock, 
   Lightbulb, 
   Sliders
@@ -11,18 +10,22 @@ export function RiskResultCard({ result, corridorName }) {
   if (!result) return null;
 
   const {
-    score,
-    category,
-    badgeColor,
-    gaugeColor,
-    alertSummary,
-    factorContributions,
-    recommendations,
-    calculationTimestamp,
+    score = 0,
+    category = 'Moderate',
+    badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+    gaugeColor = '#F59E0B',
+    alertSummary = 'Risk analysis completed.',
+    factorContributions = [],
+    recommendations = [],
+    calculationTimestamp = '',
   } = result;
 
+  const safeFactors = Array.isArray(factorContributions) ? factorContributions : [];
+  const safeRecs = Array.isArray(recommendations) ? recommendations : [];
+
   // Percentage for circular / horizontal gauge
-  const scorePercent = Math.min(100, Math.max(0, score));
+  const numScore = typeof score === 'number' && !isNaN(score) ? score : 0;
+  const scorePercent = Math.min(100, Math.max(0, numScore));
 
   return (
     <div className="charcoal-card rounded-2xl border border-charcoal-750/90 shadow-card-dark p-5 sm:p-7 backdrop-blur-xl flex flex-col justify-between h-full">
@@ -143,7 +146,7 @@ export function RiskResultCard({ result, corridorName }) {
           </h4>
 
           <div className="space-y-2">
-            {factorContributions.map((item, index) => (
+            {safeFactors.map((item, index) => (
               <div
                 key={index}
                 className="p-3 rounded-xl bg-charcoal-900/70 border border-charcoal-750/80 hover:border-charcoal-700 flex items-center justify-between text-xs transition-colors"
@@ -174,14 +177,14 @@ export function RiskResultCard({ result, corridorName }) {
         </div>
 
         {/* Prescriptive Safety Actions */}
-        <div className="mb-6">
+        <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center space-x-1.5">
             <Lightbulb className="w-3.5 h-3.5 text-brand-orange" />
             <span>AI Prescriptive Safety Advisories</span>
           </h4>
 
           <div className="space-y-2">
-            {recommendations.map((rec, index) => (
+            {safeRecs.map((rec, index) => (
               <div
                 key={index}
                 className="p-3 rounded-xl bg-charcoal-900/50 border border-charcoal-750/80 flex items-start space-x-2.5 text-xs"
@@ -201,24 +204,6 @@ export function RiskResultCard({ result, corridorName }) {
           </div>
         </div>
 
-      </div>
-
-      {/* Stage 2 ML Integration Bridge Callout */}
-      <div className="pt-4 border-t border-charcoal-750/80">
-        <div className="p-3.5 rounded-xl bg-gradient-to-r from-charcoal-900 to-charcoal-850 border border-charcoal-750/80 flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 rounded-lg bg-brand-orange/15 text-brand-orange border border-brand-orange/30">
-              <Cpu className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-white">Stage 2 AI Connection Ready</p>
-              <p className="text-[11px] text-slate-400">Clean input schema ready for XGBoost / RandomForest inference</p>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-1 rounded bg-charcoal-800 text-slate-300 border border-charcoal-700">
-            Pending API
-          </span>
-        </div>
       </div>
 
     </div>

@@ -1236,41 +1236,6 @@ export function JourneySafetyMode() {
           </div>
         </div>
 
-        {/* Live Service Availability Badges */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px] font-mono">
-          <div className="p-2.5 rounded-xl bg-charcoal-850 border border-charcoal-750 flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <div>
-              <span className="text-slate-400 text-[10px] block">Atmospheric Feed</span>
-              <span className="font-semibold text-slate-200">Open-Meteo (Live)</span>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-charcoal-850 border border-charcoal-750 flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <div>
-              <span className="text-slate-400 text-[10px] block">Crash Blackspots</span>
-              <span className="font-semibold text-slate-200">Regional Registry</span>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-charcoal-850 border border-charcoal-750 flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-            <div>
-              <span className="text-slate-400 text-[10px] block">Live Congestion Feed</span>
-              <span className="font-semibold text-slate-400">Enterprise Unconnected</span>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-charcoal-850 border border-charcoal-750 flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-            <div>
-              <span className="text-slate-400 text-[10px] block">Risk Engine</span>
-              <span className="font-semibold text-slate-200">AASHTO Heuristic</span>
-            </div>
-          </div>
-        </div>
-
         {/* Risk Analysis Loading State */}
         {isAnalyzingRisk && (
           <div className="p-4 rounded-xl bg-charcoal-850/80 border border-charcoal-750 flex items-center justify-center space-x-3 text-xs text-slate-300">

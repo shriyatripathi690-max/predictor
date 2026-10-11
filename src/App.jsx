@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { SafetyAlertsBanner } from './components/SafetyAlertsBanner';
 import { MetricCard } from './components/MetricCard';
+import { RouteAnalyticsBar } from './components/RouteAnalyticsBar';
 import { RiskAnalysisForm } from './components/RiskAnalysisForm';
 import { RiskResultCard } from './components/RiskResultCard';
 import { AccidentHotspotsMap } from './components/AccidentHotspotsMap';
@@ -15,16 +16,18 @@ import { MonitoredCorridorsModal } from './components/MonitoredCorridorsModal';
 import { DatasetImportModal } from './components/DatasetImportModal';
 import { JourneyProvider, useJourney } from './context/JourneyContext';
 import { calculateSimulatedRisk } from './utils/riskCalculator';
-import { Database, ShieldCheck } from 'lucide-react';
+import { Database, ShieldCheck, Route, AlertOctagon } from 'lucide-react';
 
 function DashboardContent() {
   const { 
     currentJourney, 
     hotspots,
-    hotspotStats, 
     corridorMetrics, 
-    morthSummary, 
-    datasetSourceInfo 
+    datasetSourceInfo,
+    routeMetrics,
+    historicalPeriod,
+    bufferDistanceKm,
+    isPlanningJourney,
   } = useJourney();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -54,14 +57,16 @@ function DashboardContent() {
 
   // Automatically synchronize result when active journey evaluation changes
   useEffect(() => {
-    if (currentJourney?.evaluationResult) {
+    if (currentJourney?.evaluationResult && typeof currentJourney.evaluationResult.score === 'number') {
       setCurrentResult(currentJourney.evaluationResult);
       setCurrentCorridorName(
         currentJourney.formInputs?.corridorName || 
         `${currentJourney.origin?.name} → ${currentJourney.destination?.name}`
       );
+    } else if (currentJourney?.formInputs?.corridorName) {
+      setCurrentCorridorName(currentJourney.formInputs.corridorName);
     }
-  }, [currentJourney?.evaluationResult, currentJourney?.id]);
+  }, [currentJourney?.evaluationResult, currentJourney?.id, currentJourney?.formInputs?.corridorName]);
 
   // Handle Risk Analysis submission
   const handleAnalyze = (formData, evaluatedResult) => {
@@ -70,7 +75,9 @@ function DashboardContent() {
 
     // Realistic brief computation delay
     setTimeout(() => {
-      const result = evaluatedResult || calculateSimulatedRisk(formData);
+      const result = (evaluatedResult && typeof evaluatedResult.score === 'number' && Array.isArray(evaluatedResult.factorContributions))
+        ? evaluatedResult
+        : calculateSimulatedRisk(formData);
       setCurrentResult(result);
       setIsAnalyzing(false);
 
@@ -88,7 +95,6 @@ function DashboardContent() {
   const handleSelectHotspotFromMap = (hotspot) => {
     setCurrentCorridorName(hotspot.name);
     
-    // Parse speed values from hotspot strings like "80 km/h"
     const parsedSpeedLimit = parseInt(hotspot.speedLimit, 10) || 80;
     const parsedObservedSpeed = parseInt(hotspot.observedAvgSpeed, 10) || 92;
 
@@ -110,68 +116,120 @@ function DashboardContent() {
     const calculated = calculateSimulatedRisk(mockInputs);
     setCurrentResult(calculated);
 
-    // Scroll to predictor section
     const predictorEl = document.getElementById('predictor');
     if (predictorEl) {
       predictorEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // Dynamically calculated dashboard statistics from single source of truth & MoRTH official census
-  const dynamicMetrics = useMemo(() => [
-    {
-      id: 'corridors',
-      title: 'Monitored Corridors',
-      value: corridorMetrics.status === 'calculating'
-        ? 'Calculating...'
-        : corridorMetrics.status === 'unavailable'
-        ? 'Distance unavailable'
-        : `${corridorMetrics.formattedDistance}${corridorMetrics.isCached ? ' (Cached)' : ''}`,
-      subtext: `Across ${corridorMetrics.corridorCount} monitored arterial corridors`,
-      change: corridorMetrics.status === 'unavailable'
-        ? 'Routing API offline'
-        : corridorMetrics.isCached
-        ? 'Cached road network'
-        : '100% OSRM road geometry',
-      isPositive: corridorMetrics.status !== 'unavailable',
-      status: corridorMetrics.status === 'unavailable' ? 'severe' : 'normal',
-      badgeText: corridorMetrics.status === 'live' ? 'LIVE OSRM' : corridorMetrics.status === 'cached' ? 'CACHED' : 'OFFLINE',
-      onClick: () => setShowCorridorModal(true),
-    },
-    {
-      id: 'national_accidents',
-      title: 'National Reported Accidents',
-      value: morthSummary?.totalAccidents ? `${morthSummary.totalAccidents.toLocaleString()}` : '461,312',
-      subtext: `${morthSummary?.fatalities?.toLocaleString() || '168,491'} fatalities (MoRTH Official 2022)`,
-      change: '+11.9% vs 2021 (Post-COVID)',
-      isPositive: false,
-      status: 'severe',
-      badgeText: 'MoRTH CENSUS',
-      onClick: () => setShowDatasetModal(true),
-    },
-    {
-      id: 'avg_severity',
-      title: 'National Severity Index',
-      value: `${morthSummary?.severityIndex || 36.5} / 100`,
-      subtext: 'Fatalities per 100 accidents (MoRTH standard)',
-      change: '+4.1 vs 2018 (32.4)',
-      isPositive: false,
-      status: 'severe',
-      badgeText: 'FATALITY RATIO',
-      onClick: () => setShowDatasetModal(true),
-    },
-    {
-      id: 'verified_blackspots',
-      title: 'Verified Highway Blackspots',
-      value: `${hotspots.length} Nodes`,
-      subtext: `NHAI 500m protocol (${hotspotStats.highRiskCount} High / Severe)`,
-      change: datasetSourceInfo.isOfficialBenchmark ? 'MoRTH / NHAI Registry' : 'Custom Imported',
-      isPositive: true,
-      status: 'normal',
-      badgeText: datasetSourceInfo.isOfficialBenchmark ? 'NHAI VERIFIED' : 'CUSTOM DATA',
-      onClick: () => setShowDatasetModal(true),
-    },
-  ], [corridorMetrics, morthSummary, hotspots.length, hotspotStats.highRiskCount, datasetSourceInfo]);
+  // Scroll to section helper
+  const scrollToSection = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // --- The Four Route-Specific Historical Accident Dashboard Cards ---
+  const dynamicMetrics = useMemo(() => {
+    const isCalculating = isPlanningJourney || routeMetrics?.status === 'calculating';
+    const isNoRoute = routeMetrics?.status === 'no_route';
+
+    // Format historical period badge text
+    const periodBadge = historicalPeriod === '2022' 
+      ? '2022 ONLY' 
+      : historicalPeriod === '2020_2022' 
+      ? '2020–2022' 
+      : '2018–2022';
+
+    return [
+      // Card 1: Total Historical Accidents along Route
+      {
+        id: 'route_total_accidents',
+        title: 'Total Historical Accidents',
+        value: isCalculating
+          ? 'Calculating...'
+          : isNoRoute
+          ? 'No Route'
+          : `${routeMetrics.totalAccidents.toLocaleString()} Collisions`,
+        subtext: isNoRoute 
+          ? 'Select a route corridor above' 
+          : `Along ${routeMetrics.routeName} (${routeMetrics.routeDistanceKm} km)`,
+        change: `${routeMetrics.bufferDistanceKm || bufferDistanceKm} km corridor buffer`,
+        isPositive: routeMetrics.totalAccidents < 50,
+        status: isCalculating ? 'normal' : routeMetrics.totalAccidents >= 80 ? 'severe' : routeMetrics.totalAccidents >= 30 ? 'moderate' : 'safe',
+        badgeText: periodBadge,
+        onClick: () => scrollToSection('hotspots'),
+      },
+
+      // Card 2: Fatal Accidents along Route
+      {
+        id: 'route_fatal_accidents',
+        title: 'Fatal Accidents',
+        value: isCalculating
+          ? 'Calculating...'
+          : isNoRoute
+          ? 'No Route'
+          : `${routeMetrics.fatalAccidents.toLocaleString()} Fatalities`,
+        subtext: isNoRoute 
+          ? 'Select a route corridor above' 
+          : `${routeMetrics.severityRate}% severity rate along corridor`,
+        change: `${routeMetrics.grievousInjuries || 0} severe injuries`,
+        isPositive: false,
+        status: isCalculating ? 'normal' : routeMetrics.fatalAccidents >= 30 ? 'severe' : routeMetrics.fatalAccidents > 0 ? 'moderate' : 'safe',
+        badgeText: 'ROUTE FATALITIES',
+        onClick: () => scrollToSection('hotspots'),
+      },
+
+      // Card 3: Verified Blackspots along Route
+      {
+        id: 'route_verified_blackspots',
+        title: 'Verified Blackspots',
+        value: isCalculating
+          ? 'Calculating...'
+          : isNoRoute
+          ? 'No Route'
+          : `${routeMetrics.verifiedBlackspotsCount} Nodes`,
+        subtext: isNoRoute
+          ? 'Select a route corridor above'
+          : `${routeMetrics.highRiskBlackspotsCount} High/Severe priority zones`,
+        change: `Within ${routeMetrics.bufferDistanceKm || bufferDistanceKm} km buffer`,
+        isPositive: routeMetrics.verifiedBlackspotsCount === 0,
+        status: isCalculating ? 'normal' : routeMetrics.verifiedBlackspotsCount >= 2 ? 'severe' : routeMetrics.verifiedBlackspotsCount > 0 ? 'moderate' : 'safe',
+        badgeText: 'CORRIDOR NODES',
+        onClick: () => scrollToSection('hotspots'),
+      },
+
+      // Card 4: Route Accident Risk Score (0 - 100 or "Insufficient data")
+      {
+        id: 'route_risk_score',
+        title: 'Route Accident Risk Score',
+        value: isCalculating
+          ? 'Calculating...'
+          : isNoRoute
+          ? 'No Route'
+          : routeMetrics.riskScore !== null
+          ? `${routeMetrics.riskScore} / 100`
+          : 'Insufficient data',
+        subtext: isNoRoute
+          ? 'Select a route corridor above'
+          : routeMetrics.riskScore !== null
+          ? `${routeMetrics.riskLevel} Risk Classification`
+          : 'Zero geocoded records in buffer',
+        change: routeMetrics.riskScore !== null
+          ? 'Multi-factor empirical index'
+          : 'Data unavailable',
+        isPositive: routeMetrics.riskScore !== null ? routeMetrics.riskScore < 50 : true,
+        status: isCalculating
+          ? 'normal'
+          : routeMetrics.riskScore !== null
+          ? (routeMetrics.riskScore >= 70 ? 'severe' : routeMetrics.riskScore >= 50 ? 'moderate' : 'safe')
+          : 'normal',
+        badgeText: routeMetrics.riskScore !== null ? 'ROUTE SCORE' : 'DATA GAP',
+        onClick: () => scrollToSection('predictor'),
+      },
+    ];
+  }, [routeMetrics, historicalPeriod, bufferDistanceKm, isPlanningJourney]);
 
   return (
     <div className="min-h-screen bg-charcoal-950 text-slate-100 flex font-sans selection:bg-brand-orange/30 selection:text-orange-200">
@@ -203,7 +261,7 @@ function DashboardContent() {
         {/* Main Content Container */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
           
-          {/* Hero Section & Prototype Status Header */}
+          {/* Hero Section & Route-Specific Analytics Header */}
           <section id="overview" className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 charcoal-card rounded-2xl border border-charcoal-750/90 p-6 sm:p-7 shadow-card-dark">
               <div>
@@ -211,21 +269,24 @@ function DashboardContent() {
                   Road Accident Risk Prediction &amp; Safety Analytics
                 </h1>
                 <p className="text-sm text-slate-300 mt-1.5 max-w-3xl leading-relaxed">
-                  Interactive decision-support platform integrating official Ministry of Road Transport and Highways (MoRTH) nationwide statistics and NHAI geolocated National Highway blackspot intelligence.
+                  Corridor-grounded decision support platform calculating actual historical collision frequencies, fatalities, and empirical risk scores along your active route.
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-slate-400">
                   <span className="flex items-center space-x-1 font-mono text-[11px] text-emerald-400">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>MoRTH 2022 Census (461,312 Accidents)</span>
+                    <span>Route-Specific Spatial Matching</span>
                   </span>
                   <span>•</span>
                   <span className="font-mono text-[11px] text-cyan-300">
-                    Verified NHAI Blackspots ({hotspots.length} Nodes)
+                    Verified NHAI Blackspots ({hotspots.length} Nationwide Nodes)
                   </span>
                   <span>•</span>
-                  <span className="font-mono text-[11px] text-brand-orange">
-                    OSRM Monitored Corridors ({corridorMetrics.formattedDistance})
-                  </span>
+                  <button
+                    onClick={() => setShowCorridorModal(true)}
+                    className="font-mono text-[11px] text-brand-orange hover:underline cursor-pointer"
+                  >
+                    Monitored Network ({corridorMetrics.formattedDistance})
+                  </button>
                 </div>
               </div>
 
@@ -244,7 +305,10 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* 3. Dashboard KPI Metrics Cards */}
+            {/* Route Analytics Context & Parameter Bar (Route switcher, Buffer distance, Period) */}
+            <RouteAnalyticsBar />
+
+            {/* The Four Route-Specific Dashboard Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {dynamicMetrics.map((metric) => (
                 <MetricCard key={metric.id} metric={metric} />
@@ -262,7 +326,7 @@ function DashboardContent() {
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Calculate road routes across India, display driving paths, and initialize journey safety controls with blackspot intersection detection.
+                Calculate custom road routes across India. Any planned journey automatically updates the 4 dashboard cards above with route-specific historical accident records.
               </p>
             </div>
 
@@ -359,7 +423,7 @@ function DashboardContent() {
             </ErrorBoundary>
           </section>
 
-          {/* 7. Historical Analytics and Trends Section */}
+          {/* 7. Historical Analytics and Trends Section (MoRTH Nationwide Data) */}
           <section id="trends" className="scroll-mt-20 space-y-4">
             <div>
               <div className="flex items-center space-x-2">
@@ -369,7 +433,7 @@ function DashboardContent() {
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Official Ministry of Road Transport and Highways (MoRTH) 5-year trends (2018–2022), 36 state/UT census comparisons, road class breakdowns, and circadian distributions.
+                Official Ministry of Road Transport and Highways (MoRTH) nationwide 5-year trends (2018–2022), 36 state/UT census comparisons, road class breakdowns, and circadian distributions.
               </p>
             </div>
 

@@ -1,21 +1,25 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { SAMPLE_HOTSPOTS_DATA, calculateHotspotStats } from '../services/hotspotService';
-import { geocodeLocation, calculateDrivableRoute, getHaversineDistanceKm } from '../services/routingService';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { SAMPLE_HOTSPOTS_DATA, calculateHotspotStats } from '../services/hotspotService.js';
+import { geocodeLocation, calculateDrivableRoute, getHaversineDistanceKm } from '../services/routingService.js';
 import {
   DEFAULT_MONITORED_CORRIDORS,
   calculateAllMonitoredCorridors,
   getCachedCorridorDistances,
   deduplicateCorridors,
-} from '../services/corridorService';
+} from '../services/corridorService.js';
 import {
   MORTH_METADATA,
   MORTH_NATIONAL_TRENDS,
   MORTH_STATE_WISE_2022,
   getMorthNationwideSummary,
-} from '../services/morthDataService';
-import { BLACKSPOT_DATASET_METADATA } from '../services/blackspotDataService';
-import { analyzeRouteRisk } from '../utils/routeRiskAnalyzer';
-import { calculateSimulatedRisk } from '../utils/riskCalculator';
+} from '../services/morthDataService.js';
+import { BLACKSPOT_DATASET_METADATA } from '../services/blackspotDataService.js';
+import { analyzeRouteRisk } from '../utils/routeRiskAnalyzer.js';
+import { calculateSimulatedRisk } from '../utils/riskCalculator.js';
+import { 
+  matchAccidentsToRoute, 
+  PREDEFINED_ROUTES 
+} from '../services/routeAccidentMatcher.js';
 
 const JourneyContext = createContext(null);
 
@@ -99,14 +103,19 @@ export function JourneyProvider({ children }) {
     } catch {}
   }, []);
 
-  // --- 2. Active Journey State ---
+  // --- 2. Active Route & Journey State ---
+  const defaultInitialRoute = PREDEFINED_ROUTES[0]; // Route A: NH-48 Express Delhi ↔ Gurugram
+
+  const [selectedRouteId, setSelectedRouteId] = useState('route_a');
+  const [bufferDistanceKm, setBufferDistanceKm] = useState(5); // Default 5 km buffer
+  const [historicalPeriod, setHistoricalPeriod] = useState('all'); // 'all' (2018–2022) | '2020_2022' | '2022'
+
   const [currentJourney, setCurrentJourney] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_JOURNEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.routeData && Array.isArray(parsed.routeData.coordinates)) {
-          // Normalize evaluatedSegments if coordinates is an object from prior schema
           if (parsed.riskAnalysis && Array.isArray(parsed.riskAnalysis.evaluatedSegments)) {
             parsed.riskAnalysis.evaluatedSegments = parsed.riskAnalysis.evaluatedSegments.map((seg) => {
               if (seg && !Array.isArray(seg.coordinates) && typeof seg.startIndex === 'number' && typeof seg.endIndex === 'number') {
@@ -124,19 +133,129 @@ export function JourneyProvider({ children }) {
           return parsed;
         }
       }
-    } catch {
-      // No saved journey
-    }
-    return null;
+    } catch {}
+
+    // Initialize with Route A so the application immediately has active route-specific historical data
+    return {
+      id: 'JRN-ROUTE-A',
+      createdAt: new Date().toISOString(),
+      origin: defaultInitialRoute.origin,
+      destination: defaultInitialRoute.destination,
+      routeData: {
+        distanceKm: defaultInitialRoute.distanceKm,
+        durationMin: defaultInitialRoute.durationMin,
+        coordinates: defaultInitialRoute.coordinates,
+      },
+      formInputs: {
+        corridorName: defaultInitialRoute.name,
+        originName: defaultInitialRoute.origin.name,
+        destinationName: defaultInitialRoute.destination.name,
+        distanceKm: defaultInitialRoute.distanceKm,
+        durationMin: defaultInitialRoute.durationMin,
+        roadType: 'expressway',
+        speedLimit: 80,
+        userSpeed: 88,
+      },
+      status: 'ready',
+    };
   });
 
   const [isPlanningJourney, setIsPlanningJourney] = useState(false);
   const [planningError, setPlanningError] = useState(null);
 
-  // Request counter ref to prevent async race conditions
   const activeJourneyRequestIdRef = useRef(0);
 
-  // --- 3. Monitored Corridors & Real Driving Distance State (Single Source of Truth) ---
+  // Switch between Predefined Routes (Route A, Route B, etc.) or Custom Route
+  const selectRouteById = useCallback((routeId) => {
+    if (routeId === 'custom') {
+      setSelectedRouteId('custom');
+      return;
+    }
+
+    const found = PREDEFINED_ROUTES.find((r) => r.id === routeId);
+    if (!found) return;
+
+    setSelectedRouteId(routeId);
+    const newJourney = {
+      id: `JRN-${found.id.toUpperCase()}-${Date.now().toString(36)}`,
+      createdAt: new Date().toISOString(),
+      origin: found.origin,
+      destination: found.destination,
+      routeData: {
+        distanceKm: found.distanceKm,
+        durationMin: found.durationMin,
+        coordinates: found.coordinates,
+      },
+      formInputs: {
+        corridorName: found.name,
+        originName: found.origin.name,
+        destinationName: found.destination.name,
+        distanceKm: found.distanceKm,
+        durationMin: found.durationMin,
+        roadType: 'expressway',
+        speedLimit: 80,
+        userSpeed: 88,
+      },
+      status: 'ready',
+    };
+
+    setCurrentJourney(newJourney);
+  }, []);
+
+  // --- 3. Route-Specific Historical Accident Metrics (Single Source of Truth) ---
+  const routeMetrics = useMemo(() => {
+    if (isPlanningJourney) {
+      return {
+        status: 'calculating',
+        totalAccidents: 0,
+        fatalAccidents: 0,
+        grievousInjuries: 0,
+        verifiedBlackspotsCount: 0,
+        highRiskBlackspotsCount: 0,
+        severityRate: 0,
+        riskScore: null,
+        riskLevel: 'Calculating...',
+        bufferDistanceKm,
+        timePeriod: historicalPeriod,
+        routeName: 'Calculating Route...',
+        routeDistanceKm: 0,
+      };
+    }
+
+    const coords = currentJourney?.routeData?.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) {
+      return {
+        status: 'no_route',
+        matchedRecords: [],
+        totalAccidents: 0,
+        fatalAccidents: 0,
+        grievousInjuries: 0,
+        verifiedBlackspotsCount: 0,
+        highRiskBlackspotsCount: 0,
+        severityRate: 0,
+        riskScore: null,
+        riskLevel: 'Insufficient data',
+        explanation: 'No route currently active. Select a route above or plan a journey.',
+        bufferDistanceKm,
+        timePeriod: historicalPeriod,
+        routeName: 'No Active Route',
+        routeDistanceKm: 0,
+      };
+    }
+
+    const routeName = currentJourney.formInputs?.corridorName ||
+      `${currentJourney.origin?.name || 'Origin'} → ${currentJourney.destination?.name || 'Destination'}`;
+    const routeDistanceKm = currentJourney.routeData?.distanceKm || 25;
+
+    return matchAccidentsToRoute(coords, hotspots, {
+      bufferDistanceKm,
+      timePeriod: historicalPeriod,
+      routeDistanceKm,
+      routeName,
+    });
+  }, [currentJourney, hotspots, bufferDistanceKm, historicalPeriod, isPlanningJourney]);
+
+  // --- 4. Monitored Corridors & Real Driving Distance State ---
   const [monitoredCorridors, setMonitoredCorridors] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CORRIDORS_LIST);
@@ -144,9 +263,7 @@ export function JourneyProvider({ children }) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return deduplicateCorridors(parsed);
       }
-    } catch {
-      // Fallback
-    }
+    } catch {}
     return DEFAULT_MONITORED_CORRIDORS;
   });
 
@@ -161,12 +278,10 @@ export function JourneyProvider({ children }) {
     }
     return {
       status: 'calculating',
-      totalDistanceMeters: null,
-      totalDistanceKm: null,
+      totalDistanceMeters: 0,
+      totalDistanceKm: '0.00',
       formattedDistance: 'Calculating...',
       corridorCount: DEFAULT_MONITORED_CORRIDORS.length,
-      isCached: false,
-      cachedAt: null,
       provider: 'OSRM Driving Engine (OpenStreetMap)',
       aggregationMethod: 'Sum of unique corridor driving distances',
       corridors: [],
@@ -180,9 +295,7 @@ export function JourneyProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_CORRIDORS_LIST, JSON.stringify(monitoredCorridors));
-    } catch {
-      // Ignore
-    }
+    } catch {}
   }, [monitoredCorridors]);
 
   // Recalculate corridor distances when corridors change or on mount
@@ -209,9 +322,7 @@ export function JourneyProvider({ children }) {
   }, [monitoredCorridors, calculateCorridors]);
 
   const refreshCorridorMetrics = useCallback(
-    (force = true) => {
-      return calculateCorridors(monitoredCorridors, force);
-    },
+    (force = true) => calculateCorridors(monitoredCorridors, force),
     [monitoredCorridors, calculateCorridors]
   );
 
@@ -231,16 +342,14 @@ export function JourneyProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY_CORRIDORS_LIST);
   }, []);
 
-  // Persist hotspots whenever modified
+  // Persist hotspots
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_HOTSPOTS, JSON.stringify(hotspots));
-    } catch {
-      // Ignore quota errors
-    }
+    } catch {}
   }, [hotspots]);
 
-  // Persist journey whenever modified
+  // Persist journey
   useEffect(() => {
     try {
       if (currentJourney) {
@@ -248,9 +357,7 @@ export function JourneyProvider({ children }) {
       } else {
         localStorage.removeItem(STORAGE_KEY_JOURNEY);
       }
-    } catch {
-      // Ignore storage errors
-    }
+    } catch {}
   }, [currentJourney]);
 
   /**
@@ -263,26 +370,20 @@ export function JourneyProvider({ children }) {
     setPlanningError(null);
 
     try {
-      // 1. Geocode both locations into geographic coordinates
       const origin = await geocodeLocation(originInput);
       const destination = await geocodeLocation(destInput);
 
-      // Check if another request was initiated while geocoding
       if (requestId !== activeJourneyRequestIdRef.current) return null;
 
-      // 2. Compute drivable route geometry via OSRM / calibrated road network
       const routeData = await calculateDrivableRoute(origin, destination);
       if (requestId !== activeJourneyRequestIdRef.current) return null;
 
-      // 3. Analyze route risk and identify along-route hotspots
       const riskAnalysis = await analyzeRouteRisk(routeData, origin, destination);
       if (requestId !== activeJourneyRequestIdRef.current) return null;
 
-      // Identify hotspots in our active dataset that lie near the route (< 15 km)
       const routeCoords = routeData.coordinates || [];
       const alongRouteHotspotIds = [];
       hotspots.forEach((hs) => {
-        // Sample points on route to check minimum distance
         let minDistance = Infinity;
         for (let i = 0; i < routeCoords.length; i += Math.max(1, Math.floor(routeCoords.length / 25))) {
           const [lon, lat] = routeCoords[i];
@@ -294,16 +395,13 @@ export function JourneyProvider({ children }) {
         }
       });
 
-      // Unique Journey ID
       const journeyId = `JRN-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
-      // Derive default environmental factors from live route risk analysis
       const defaultWeather = riskAnalysis?.evaluatedSegments?.[0]?.weatherSnapshot?.weatherKey || 'heavy_rain';
       const defaultSurface = riskAnalysis?.evaluatedSegments?.[0]?.weatherSnapshot?.surfaceCondition || 'waterlogged';
       const defaultTime = riskAnalysis?.evaluatedSegments?.[0]?.circadianContext?.timeOfDay || 'late_night';
       const defaultLighting = riskAnalysis?.evaluatedSegments?.[0]?.circadianContext?.lighting || 'unlit';
 
-      // Auto-populate form inputs
       const formInputs = {
         journeyId,
         corridorName: `${origin.name} → ${destination.name}`,
@@ -336,10 +434,11 @@ export function JourneyProvider({ children }) {
         riskAnalysis,
         alongRouteHotspotIds,
         formInputs,
-        evaluationResult: null, // Reset previous route-specific evaluation
+        evaluationResult: null,
         status: 'ready',
       };
 
+      setSelectedRouteId('custom');
       setCurrentJourney(newJourney);
       setIsPlanningJourney(false);
       return newJourney;
@@ -352,9 +451,6 @@ export function JourneyProvider({ children }) {
     }
   }, [hotspots]);
 
-  /**
-   * Update current journey form inputs without recalculating route
-   */
   const updateFormInputs = useCallback((inputs) => {
     setCurrentJourney((prev) => {
       if (!prev) return null;
@@ -369,129 +465,121 @@ export function JourneyProvider({ children }) {
   }, []);
 
   /**
-   * Submit an evaluation for the active journey.
+   * Submit an evaluation for the active journey or standalone inputs.
    * Runs the risk evaluation engine, generates an evaluation ID, attaches it to the journey,
    * and updates any matching hotspots in the shared dataset without duplicating.
    */
   const evaluateJourney = useCallback((formData) => {
-    if (!currentJourney) {
-      // Fallback for manual evaluation without planned journey
-      const res = calculateSimulatedRisk(formData);
-      return res;
-    }
+    if (!formData) return null;
 
     const evaluationId = `EVAL-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
     const evaluatedResult = calculateSimulatedRisk({
       ...formData,
-      journeyId: currentJourney.id,
+      journeyId: currentJourney?.id,
       evaluationId,
     });
 
-    // Update current journey with the new evaluation result
-    setCurrentJourney((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        evaluationResult: evaluatedResult,
-        status: 'evaluated',
-      };
-    });
-
-    // Consistent Location-Matching Strategy:
-    // Update existing hotspot if the evaluated corridor matches an existing hotspot (name match or within 2.5 km),
-    // or add a single new hotspot if severe/high and non-existent.
-    setHotspots((prevHotspots) => {
-      const corridorQuery = (formData.corridorName || '').toLowerCase();
-      let matchedIndex = -1;
-
-      // Check name match
-      matchedIndex = prevHotspots.findIndex((h) =>
-        corridorQuery.includes(h.name.toLowerCase()) || h.name.toLowerCase().includes(corridorQuery)
-      );
-
-      // Check proximity match to origin or destination if name didn't match
-      if (matchedIndex === -1 && currentJourney.origin) {
-        matchedIndex = prevHotspots.findIndex((h) => {
-          const dOrigin = getHaversineDistanceKm(currentJourney.origin.lat, currentJourney.origin.lon, h.lat, h.lng);
-          const dDest = getHaversineDistanceKm(currentJourney.destination.lat, currentJourney.destination.lon, h.lat, h.lng);
-          return dOrigin < 2.5 || dDest < 2.5;
-        });
-      }
-
-      if (matchedIndex !== -1) {
-        // Update existing hotspot in place (NO duplicate created!)
-        const updated = [...prevHotspots];
-        const existing = updated[matchedIndex];
-        updated[matchedIndex] = {
-          ...existing,
-          riskScore: evaluatedResult.score,
-          riskLevel: evaluatedResult.category,
-          riskCategory: evaluatedResult.category === 'Severe' || evaluatedResult.category === 'High' ? 'high' : evaluatedResult.category === 'Moderate' ? 'medium' : 'low',
-          roadConditions: `${formData.surfaceCondition.replace('_', ' ')} • ${formData.weather.replace('_', ' ')}`,
-          weatherImpact: evaluatedResult.alertSummary,
-          recommendedAction: evaluatedResult.recommendations?.[0]?.action || existing.recommendedAction,
-          lastEvaluated: new Date().toISOString(),
-          evaluationId,
+    if (currentJourney) {
+      // Update current journey with the new evaluation result
+      setCurrentJourney((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          evaluationResult: evaluatedResult,
+          status: 'evaluated',
         };
-        return updated;
-      }
+      });
 
-      // If no matching hotspot found and risk is severe/high, add one cleanly labeled
-      if (evaluatedResult.score >= 65) {
-        const nextId = `HS-${String(prevHotspots.length + 1).padStart(2, '0')}`;
-        const newHotspot = {
-          id: nextId,
-          name: formData.corridorName || `Evaluated Corridor Segment (${nextId})`,
-          type: formData.roadType === 'expressway' ? 'Highway Express' : 'Urban Arterial',
-          lat: currentJourney.origin.lat,
-          lng: currentJourney.origin.lon,
-          coordinates: `${currentJourney.origin.lat.toFixed(4)}° N, ${currentJourney.origin.lon.toFixed(4)}° E`,
-          riskScore: evaluatedResult.score,
-          riskLevel: evaluatedResult.category,
-          riskCategory: 'high',
-          primaryCause: evaluatedResult.factorContributions?.[0]?.description || 'Evaluated compound road risk',
-          hazardType: 'Evaluated corridor risk factor',
-          hazardCategories: ['dangerous_intersections', 'weather_hazards'],
-          roadConditions: `${formData.surfaceCondition} surface`,
-          weatherImpact: evaluatedResult.alertSummary,
-          speedLimit: `${formData.speedLimit} km/h`,
-          observedAvgSpeed: `${formData.userSpeed} km/h`,
-          recentIncidentsCount: 5,
-          recommendedAction: evaluatedResult.recommendations?.[0]?.action || 'Deploy corridor safety audit.',
-          radiusMeters: 450,
-          isUserEvaluated: true,
-          evaluationId,
-        };
-        return [...prevHotspots, newHotspot];
-      }
+      // Consistent Location-Matching Strategy:
+      // Update existing hotspot if the evaluated corridor matches an existing hotspot (name match or within 2.5 km),
+      // or add a single new hotspot if severe/high and non-existent.
+      setHotspots((prevHotspots) => {
+        const corridorQuery = (formData.corridorName || '').toLowerCase();
+        let matchedIndex = -1;
 
-      return prevHotspots;
-    });
+        // Check name match
+        matchedIndex = prevHotspots.findIndex((h) =>
+          corridorQuery.includes(h.name.toLowerCase()) || h.name.toLowerCase().includes(corridorQuery)
+        );
+
+        // Check proximity match to origin or destination if name didn't match
+        if (matchedIndex === -1 && currentJourney.origin) {
+          matchedIndex = prevHotspots.findIndex((h) => {
+            const dOrigin = getHaversineDistanceKm(currentJourney.origin.lat, currentJourney.origin.lon, h.lat, h.lng);
+            const dDest = getHaversineDistanceKm(currentJourney.destination.lat, currentJourney.destination.lon, h.lat, h.lng);
+            return dOrigin < 2.5 || dDest < 2.5;
+          });
+        }
+
+        if (matchedIndex !== -1) {
+          // Update existing hotspot in place (NO duplicate created!)
+          const updated = [...prevHotspots];
+          const existing = updated[matchedIndex];
+          updated[matchedIndex] = {
+            ...existing,
+            riskScore: evaluatedResult.score,
+            riskLevel: evaluatedResult.category,
+            riskCategory: evaluatedResult.category === 'Severe' || evaluatedResult.category === 'High' ? 'high' : evaluatedResult.category === 'Moderate' ? 'medium' : 'low',
+            roadConditions: `${(formData.surfaceCondition || 'dry').replace('_', ' ')} • ${(formData.weather || 'clear').replace('_', ' ')}`,
+            weatherImpact: evaluatedResult.alertSummary,
+            recommendedAction: evaluatedResult.recommendations?.[0]?.action || existing.recommendedAction,
+            lastEvaluated: new Date().toISOString(),
+            evaluationId,
+          };
+          return updated;
+        }
+
+        // If no matching hotspot found and risk is severe/high, add one cleanly labeled
+        if (evaluatedResult.score >= 65 && currentJourney.origin) {
+          const nextId = `HS-${String(prevHotspots.length + 1).padStart(2, '0')}`;
+          const newHotspot = {
+            id: nextId,
+            name: formData.corridorName || `Evaluated Corridor Segment (${nextId})`,
+            type: formData.roadType === 'expressway' ? 'Highway Express' : 'Urban Arterial',
+            lat: currentJourney.origin.lat,
+            lng: currentJourney.origin.lon,
+            coordinates: `${currentJourney.origin.lat.toFixed(4)}° N, ${currentJourney.origin.lon.toFixed(4)}° E`,
+            riskScore: evaluatedResult.score,
+            riskLevel: evaluatedResult.category,
+            riskCategory: 'high',
+            primaryCause: evaluatedResult.factorContributions?.[0]?.description || 'Evaluated compound road risk',
+            hazardType: 'Evaluated corridor risk factor',
+            hazardCategories: ['dangerous_intersections', 'weather_hazards'],
+            roadConditions: `${formData.surfaceCondition || 'dry'} surface`,
+            weatherImpact: evaluatedResult.alertSummary,
+            speedLimit: `${formData.speedLimit || 80} km/h`,
+            observedAvgSpeed: `${formData.userSpeed || 80} km/h`,
+            recentIncidentsCount: 5,
+            recommendedAction: evaluatedResult.recommendations?.[0]?.action || 'Deploy corridor safety audit.',
+            radiusMeters: 450,
+            isUserEvaluated: true,
+            evaluationId,
+          };
+          return [...prevHotspots, newHotspot];
+        }
+
+        return prevHotspots;
+      });
+    }
 
     return evaluatedResult;
   }, [currentJourney]);
 
-  /**
-   * Clear active journey and clean state
-   */
   const clearJourney = useCallback(() => {
     activeJourneyRequestIdRef.current++;
     setCurrentJourney(null);
+    setSelectedRouteId('custom');
     setPlanningError(null);
     setIsPlanningJourney(false);
   }, []);
 
-  /**
-   * Reset hotspots to factory defaults
-   */
   const resetHotspotsToDefault = useCallback(() => {
     setHotspots(SAMPLE_HOTSPOTS_DATA);
     setSelectedHotspotId(SAMPLE_HOTSPOTS_DATA[0].id);
     localStorage.removeItem(STORAGE_KEY_HOTSPOTS);
   }, []);
 
-  // Compute live dashboard statistics directly from active hotspots
   const hotspotStats = calculateHotspotStats(hotspots);
 
   const value = {
@@ -507,6 +595,15 @@ export function JourneyProvider({ children }) {
     clearJourney,
     resetHotspotsToDefault,
     hotspotStats,
+    // Route-Specific Historical Accident Analytics
+    routeMetrics,
+    selectedRouteId,
+    selectRouteById,
+    bufferDistanceKm,
+    setBufferDistanceKm,
+    historicalPeriod,
+    setHistoricalPeriod,
+    predefinedRoutes: PREDEFINED_ROUTES,
     // MoRTH Official Nationwide Statistics & Benchmarks
     morthMetadata: MORTH_METADATA,
     morthTrends: MORTH_NATIONAL_TRENDS,
@@ -518,7 +615,7 @@ export function JourneyProvider({ children }) {
     setSelectedStateFilter,
     importBlackspotsData,
     resetDatasetsToOfficial,
-    // Monitored Corridors & Real Driving Distance
+    // Monitored Corridors
     monitoredCorridors,
     corridorMetrics,
     isCalculatingCorridors,
