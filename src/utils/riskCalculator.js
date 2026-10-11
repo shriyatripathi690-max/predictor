@@ -122,6 +122,63 @@ export function calculateSimulatedRisk(inputs) {
   const densityAdd = densityWeights[trafficDensity] || 0;
   baseScore += densityAdd;
 
+  // 7. Dangerous Intersections Factor (User-Configurable Road Hazard)
+  const intersectionWeights = {
+    none: 0,
+    moderate: 12,
+    critical: 22,
+  };
+  const intersectionAdd = intersectionWeights[inputs.dangerousIntersections] || 0;
+  if (intersectionAdd > 0) {
+    baseScore += intersectionAdd;
+    factorContributions.push({
+      factor: 'Geometric Conflict & Intersection Topology',
+      impact: `+${intersectionAdd} pts`,
+      description: inputs.dangerousIntersections === 'critical' 
+        ? 'High-speed multi-leg skew intersection with severe blind-spot conflicts' 
+        : 'Signalized arterial junction with frequent queue spillback and turning conflicts',
+      severity: intersectionAdd >= 20 ? 'high' : 'medium',
+    });
+  }
+
+  // 8. Pedestrian Activity & Vulnerable Road User Exposure
+  const pedestrianWeights = {
+    low: 0,
+    moderate: 10,
+    high_conflict: 18,
+  };
+  const pedAdd = pedestrianWeights[inputs.pedestrianActivity] || 0;
+  if (pedAdd > 0) {
+    baseScore += pedAdd;
+    factorContributions.push({
+      factor: 'Vulnerable Road User Exposure',
+      impact: `+${pedAdd} pts`,
+      description: inputs.pedestrianActivity === 'high_conflict'
+        ? 'Dense pedestrian foot-traffic mixing with vehicular flows without grade separation'
+        : 'Moderate curbside transit ingress and intermittent pedestrian crossings',
+      severity: pedAdd >= 15 ? 'high' : 'medium',
+    });
+  }
+
+  // 9. Historical Corridor Accident Propensity
+  const historyWeights = {
+    standard: 0,
+    frequent_collisions: 14,
+    severe_blackspot: 24,
+  };
+  const historyAdd = historyWeights[inputs.accidentHistory] || 0;
+  if (historyAdd > 0) {
+    baseScore += historyAdd;
+    factorContributions.push({
+      factor: 'Historical Incident Cluster & Blackspot Record',
+      impact: `+${historyAdd} pts`,
+      description: inputs.accidentHistory === 'severe_blackspot'
+        ? 'Verified regional blackspot with high recurring fatal/severe collisions'
+        : 'Elevated quarterly incident frequency during adverse weather and shift peaks',
+      severity: historyAdd >= 20 ? 'high' : 'medium',
+    });
+  }
+
   // Clamp score strictly between 8 and 98
   const finalScore = Math.min(98, Math.max(8, Math.round(baseScore)));
 
@@ -160,6 +217,9 @@ export function calculateSimulatedRisk(inputs) {
     factorContributions,
     recommendations,
     calculationTimestamp: new Date().toLocaleTimeString(),
+    evaluationId: inputs.evaluationId || `EVAL-${Date.now().toString(36).toUpperCase()}`,
+    journeyId: inputs.journeyId || null,
+    evaluatedAt: new Date().toISOString(),
   };
 }
 
@@ -195,7 +255,16 @@ function getSurfaceDescription(surface) {
 
 function generateRecommendations(inputs, score) {
   const list = [];
-  const { weather, surfaceCondition, speedLimit, userSpeed, lighting } = inputs;
+  const { 
+    weather, 
+    surfaceCondition, 
+    speedLimit, 
+    userSpeed, 
+    lighting, 
+    dangerousIntersections, 
+    pedestrianActivity, 
+    accidentHistory 
+  } = inputs;
 
   if (Number(userSpeed) > Number(speedLimit)) {
     list.push({
@@ -223,6 +292,30 @@ function generateRecommendations(inputs, score) {
       priority: 'Visibility',
       action: 'Engage low-beam headlights and dedicated fog lamps. Never utilize high beams in dense particulate fog.',
       icon: 'eye',
+    });
+  }
+
+  if (dangerousIntersections === 'critical' || dangerousIntersections === 'moderate') {
+    list.push({
+      priority: 'Safety Critical',
+      action: 'Approach multi-leg conflict junctions with foot covering brake; scan for non-compliant left-turn vehicles.',
+      icon: 'navigation',
+    });
+  }
+
+  if (pedestrianActivity === 'high_conflict' || pedestrianActivity === 'moderate') {
+    list.push({
+      priority: 'Precaution',
+      action: 'Yield to unsignalized pedestrian crossing corridors; maintain scan for curbside pedestrian swarms.',
+      icon: 'user-check',
+    });
+  }
+
+  if (accidentHistory === 'severe_blackspot') {
+    list.push({
+      priority: 'Historical Advisory',
+      action: 'Corridor logged as recurring high-fatality blackspot in regional registry; automated chevron guidance advised.',
+      icon: 'alert-triangle',
     });
   }
 

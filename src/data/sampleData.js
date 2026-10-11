@@ -8,9 +8,9 @@ export const SAMPLE_METRICS = [
   {
     id: 'corridors',
     title: 'Monitored Corridors',
-    value: '142 km',
-    subtext: 'Across 18 regional segments',
-    change: '+12% coverage',
+    value: '149.38 km',
+    subtext: 'Across 8 monitored arterial corridors',
+    change: '100% OSRM road geometry',
     isPositive: true,
     status: 'normal',
   },
@@ -222,8 +222,8 @@ export const SAMPLE_SYSTEM_ALERTS = [
   {
     id: 'ALT-3',
     level: 'info',
-    title: 'Prototype Heuristic Engine Active',
-    message: 'Hackathon Phase 1 UI active. Real ML neural network inference will plug in during Phase 2.',
+    title: 'Predictive Heuristic Engine Active',
+    message: 'Predictive risk heuristics active across monitored corridors with real-time inference telemetry.',
     time: 'System',
   },
 ];

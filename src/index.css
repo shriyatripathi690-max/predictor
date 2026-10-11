@@ -1,39 +1,216 @@
+@import 'leaflet/dist/leaflet.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-navy-950 text-slate-100 antialiased min-h-screen selection:bg-orange-500/30 selection:text-orange-200;
+    @apply bg-charcoal-950 text-slate-100 antialiased min-h-screen selection:bg-brand-orange/30 selection:text-orange-200;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
   }
 }
 
-/* Custom scrollbar */
+/* Custom dark charcoal scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0B132B;
+  background: #0c0e14;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2A3C7A;
-  border-radius: 4px;
+  background: #282d3e;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3B519A;
+  background: #363d54;
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
+/* Radial hazard glowing zone animations matching the reference image */
+@keyframes hazardPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.65;
   }
   50% {
-    box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+    transform: scale(1.06);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(0.96);
+    opacity: 0.65;
   }
 }
 
-.glow-card {
-  animation: pulseGlow 4s infinite ease-in-out;
+@keyframes beaconPing {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
+
+.hazard-pulse-ring {
+  animation: hazardPulse 4s ease-in-out infinite;
+}
+
+.beacon-pulse {
+  animation: beaconPing 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Glassmorphism charcoal card style */
+.charcoal-card {
+  background-color: rgba(23, 26, 36, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.charcoal-card-elevated {
+  background-color: rgba(31, 35, 48, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Glowing hotspot radar ring styles */
+.hotspot-zone {
+  background: radial-gradient(circle, rgba(255, 106, 0, 0.35) 0%, rgba(255, 106, 0, 0.12) 45%, rgba(255, 106, 0, 0.02) 75%, transparent 100%);
+  border: 1px solid rgba(255, 106, 0, 0.22);
+}
+
+.hotspot-zone-severe {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, rgba(255, 106, 0, 0.15) 50%, rgba(239, 68, 68, 0.03) 78%, transparent 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Modern Range Slider with Orange Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ff6a00;
+  box-shadow: 0 0 10px rgba(255, 106, 0, 0.6);
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 14px rgba(255, 106, 0, 0.85);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ff6a00;
+  box-shadow: 0 0 10px rgba(255, 106, 0, 0.6);
+  cursor: pointer;
+  border: 2px solid #ffffff;
+}
+
+/* ==========================================================================
+   Leaflet Interactive Dark Theme Customization
+   ========================================================================== */
+.leaflet-container {
+  background-color: #0c0e14 !important;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif !important;
+  outline: none !important;
+}
+
+/* Dark cartography filter for standard OpenStreetMap tiles to match SafeRoad AI dark aesthetic */
+.leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
+
+/* Custom Zoom Control Styling */
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.leaflet-bar a {
+  background-color: rgba(23, 26, 36, 0.95) !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #1f2330 !important;
+  color: #ff6a00 !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
+}
+
+/* Custom Dark Popup Card */
+.leaflet-popup-content-wrapper {
+  background: rgba(18, 21, 30, 0.96) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #343b50 !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.85), 0 0 20px -3px rgba(255, 106, 0, 0.2) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #12151e !important;
+  border: 1px solid #343b50 !important;
+  box-shadow: none !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: #94a3b8 !important;
+  padding: 8px 10px !important;
+  font-size: 16px !important;
+  transition: color 0.15s ease !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #ff6a00 !important;
+}
+
+/* Subtle Attribution Bar */
+.leaflet-control-attribution {
+  background: rgba(12, 14, 20, 0.85) !important;
+  color: #64748b !important;
+  font-size: 9.5px !important;
+  border-top-left-radius: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 2px 8px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #94a3b8 !important;
+  text-decoration: none !important;
+}
+
+.leaflet-control-attribution a:hover {
+  color: #ff6a00 !important;
+}
+
+/* Custom Marker Div Icons */
+.custom-leaflet-marker {
+  background: transparent;
+  border: none;
+}
+

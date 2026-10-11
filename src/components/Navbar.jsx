@@ -7,16 +7,25 @@ import {
   Sliders, 
   Menu, 
   X,
-  BellRing
+  BellRing,
+  Route,
+  Database
 } from 'lucide-react';
 
-export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAlerts }) {
+export function Navbar({ 
+  activeTab, 
+  setActiveTab, 
+  unreadAlertsCount, 
+  onToggleAlerts,
+  onOpenDatasetModal 
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'predictor', label: 'Risk Predictor', icon: Sliders },
     { id: 'hotspots', label: 'Hotspot Map', icon: MapPin },
+    { id: 'journey', label: 'Journey Safety', icon: Route },
     { id: 'trends', label: 'Historical Analytics', icon: BarChart3 },
   ];
 
@@ -30,20 +39,20 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-navy-900/90 backdrop-blur-md border-b border-navy-750">
+    <header className="sticky top-0 z-30 bg-charcoal-900/90 backdrop-blur-xl border-b border-charcoal-750/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
           {/* Brand & Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleNavClick('overview')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-1 ring-orange-400/40">
-              <ShieldAlert className="w-6 h-6 text-white" />
+          <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => handleNavClick('overview')}>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-orange to-red-600 flex items-center justify-center shadow-lg shadow-brand-orange/20 ring-1 ring-brand-orange/40 group-hover:scale-105 transition-transform">
+              <ShieldAlert className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-bold tracking-tight text-white">SafeRoad</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  AI Core
+                <span className="text-lg font-bold tracking-tight text-white group-hover:text-slate-100 transition-colors">SafeRoad</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-brand-orange/15 text-brand-orange border border-brand-orange/30">
+                  AI Analytics
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
@@ -53,7 +62,7 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -61,13 +70,13 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
                     isActive
-                      ? 'bg-navy-800 text-white shadow-inner border border-navy-700 shadow-orange-500/5'
-                      : 'text-slate-300 hover:text-white hover:bg-navy-850'
+                      ? 'bg-charcoal-800 text-brand-orange shadow-inner border border-charcoal-700/80'
+                      : 'text-slate-400 hover:text-white hover:bg-charcoal-850'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-orange-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-brand-orange' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -75,23 +84,26 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
           </nav>
 
           {/* Right Action Icons & Badges */}
-          <div className="flex items-center space-x-3">
-            {/* Stage 1 Prototype Pill */}
-            <div className="hidden lg:flex items-center space-x-2 px-2.5 py-1 rounded-full bg-navy-850 border border-navy-700/80 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-slate-300 font-medium">Stage 1 Prototype</span>
-              <span className="text-[10px] text-slate-400 border-l border-navy-700 pl-1.5 font-mono">Sample Data</span>
-            </div>
+          <div className="flex items-center space-x-2.5">
+            {/* Dataset Integration & Import Trigger */}
+            <button
+              onClick={onOpenDatasetModal}
+              title="Official MoRTH Data & Dataset Import"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-charcoal-850 hover:bg-charcoal-800 text-slate-200 hover:text-white border border-charcoal-750 transition-colors text-xs font-semibold cursor-pointer"
+            >
+              <Database className="w-3.5 h-3.5 text-brand-orange" />
+              <span className="hidden sm:inline">Datasets &amp; Import</span>
+            </button>
 
             {/* Notification Bell Button */}
             <button
               onClick={onToggleAlerts}
               title="Toggle Simulated Alerts Banner"
-              className="relative p-2 rounded-lg bg-navy-850 text-slate-300 hover:text-white hover:bg-navy-800 border border-navy-750 transition-colors"
+              className="relative p-2 rounded-xl bg-charcoal-850 text-slate-300 hover:text-white hover:bg-charcoal-800 border border-charcoal-750 transition-colors cursor-pointer"
             >
-              <BellRing className="w-4 h-4 text-orange-400" />
+              <BellRing className="w-4 h-4 text-brand-orange" />
               {unreadAlertsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-red text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-charcoal-900">
                   {unreadAlertsCount}
                 </span>
               )}
@@ -100,7 +112,7 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg bg-navy-850 text-slate-300 hover:text-white border border-navy-750"
+              className="md:hidden p-2 rounded-xl bg-charcoal-850 text-slate-300 hover:text-white border border-charcoal-750 cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -110,12 +122,7 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-navy-900 border-b border-navy-750 px-4 pt-2 pb-4 space-y-1">
-          <div className="pb-2 border-b border-navy-800 mb-2">
-            <span className="text-xs text-orange-400 font-medium uppercase tracking-wider">
-              Hackathon Prototype Mode (Sample Data)
-            </span>
-          </div>
+        <div className="md:hidden bg-charcoal-900 border-b border-charcoal-750 px-4 pt-3 pb-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -125,8 +132,8 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
                 onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
                   isActive
-                    ? 'bg-navy-800 text-orange-400 border border-navy-700'
-                    : 'text-slate-300 hover:bg-navy-850'
+                    ? 'bg-charcoal-800 text-brand-orange border border-charcoal-700'
+                    : 'text-slate-300 hover:bg-charcoal-850'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -134,9 +141,18 @@ export function Navbar({ activeTab, setActiveTab, unreadAlertsCount, onToggleAle
               </button>
             );
           })}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              if (onOpenDatasetModal) onOpenDatasetModal();
+            }}
+            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-charcoal-850"
+          >
+            <Database className="w-4 h-4 text-brand-orange" />
+            <span>Datasets &amp; Import</span>
+          </button>
         </div>
       )}
     </header>
   );
 }
-
