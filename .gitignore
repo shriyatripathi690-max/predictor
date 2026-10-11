@@ -1,23 +1,41 @@
-# Logs
-logs
-*.log
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Python environments & cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# Build outputs
+dist/
+dist-ssr/
+build/
 *.local
-scratch/
 
-# Editor directories and files
+# Temporary & scratch files
+scratch/
+logs/
+*.log
+
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
