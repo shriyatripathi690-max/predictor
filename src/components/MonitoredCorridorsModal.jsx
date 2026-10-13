@@ -5,11 +5,8 @@ import {
   RefreshCw, 
   CheckCircle2, 
   AlertTriangle, 
-  ExternalLink, 
-  ShieldCheck, 
   Database, 
   Zap, 
-  WifiOff, 
   Layers,
   ArrowRight,
   Info
@@ -18,11 +15,9 @@ import { useJourney } from '../context/JourneyContext';
 
 export function MonitoredCorridorsModal({ isOpen, onClose }) {
   const { 
-    monitoredCorridors, 
     corridorMetrics, 
     isCalculatingCorridors, 
-    refreshCorridorMetrics, 
-    resetCorridorsToDefault 
+    refreshCorridorMetrics
   } = useJourney();
 
   const [simulatedFailure, setSimulatedFailure] = useState(false);
@@ -35,15 +30,12 @@ export function MonitoredCorridorsModal({ isOpen, onClose }) {
     totalDistanceKm,
     formattedDistance,
     totalDistanceMeters,
-    unionDistanceKm,
     formattedUnionDistance,
     corridorCount,
     isCached,
     cachedAt,
     provider,
-    aggregationMethod,
-    corridors = [],
-    error
+    corridors = []
   } = corridorMetrics;
 
   const displayDistance = simulatedFailure ? 'Distance unavailable' : formattedDistance;

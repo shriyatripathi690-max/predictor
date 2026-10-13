@@ -62,6 +62,20 @@
   animation: beaconPing 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* Accessibility: Respect user reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hazard-pulse-ring,
+  .beacon-pulse {
+    animation: none !important;
+  }
+}
+
 /* Glassmorphism charcoal card style */
 .charcoal-card {
   background-color: rgba(23, 26, 36, 0.88);

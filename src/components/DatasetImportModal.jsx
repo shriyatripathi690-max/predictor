@@ -3,14 +3,12 @@ import {
   X, 
   UploadCloud, 
   FileSpreadsheet, 
-  FileText, 
   CheckCircle2, 
   AlertTriangle, 
   Download, 
   Database, 
   RefreshCw, 
   Info, 
-  Layers, 
   MapPin, 
   ExternalLink 
 } from 'lucide-react';
@@ -28,8 +26,7 @@ export function DatasetImportModal({ isOpen, onClose }) {
   const { 
     importBlackspotsData, 
     resetDatasetsToOfficial, 
-    hotspots, 
-    datasetSourceInfo 
+    hotspots
   } = useJourney();
 
   const [activeTab, setActiveTab] = useState('blackspots'); // 'blackspots' | 'morth_state' | 'metadata'

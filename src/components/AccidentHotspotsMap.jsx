@@ -3,6 +3,8 @@ import L from 'leaflet';
 import { 
   MapPin, 
   ChevronRight, 
+  ChevronUp,
+  ChevronDown,
   Info, 
   Check, 
   Crosshair, 
@@ -10,6 +12,8 @@ import {
   Maximize2, 
   ZoomIn, 
   ZoomOut,
+  Eye,
+  EyeOff,
   Activity,
   AlertTriangle,
   Compass,
@@ -17,8 +21,6 @@ import {
   Route,
   ArrowRight,
   Search,
-  Filter,
-  ShieldAlert,
   Layers,
   Database
 } from 'lucide-react';
@@ -27,8 +29,7 @@ import {
   calculateHotspotStats 
 } from '../services/hotspotService';
 import { 
-  MORTH_STATE_WISE_2022, 
-  MORTH_METADATA 
+  MORTH_STATE_WISE_2022
 } from '../services/morthDataService';
 import { useJourney } from '../context/JourneyContext';
 
@@ -72,6 +73,26 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
   const [locationNotice, setLocationNotice] = useState(null);
   const [showRouteHud, setShowRouteHud] = useState(true);
 
+  // Collapsible Map Panels States (Defaults: expanded on desktop, compact floating pill on mobile)
+  const [isNationwideExpanded, setIsNationwideExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+  const [isVerifiedExpanded, setIsVerifiedExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+  const [isLegendExpanded, setIsLegendExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+
   // Sync state filter with context
   useEffect(() => {
     if (globalStateFilter && globalStateFilter !== selectedState) {
@@ -113,6 +134,50 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
       [layerKey]: !prev[layerKey],
     }));
   };
+
+  // Count of active hazard categories (out of 6)
+  const activeCategoriesCount = useMemo(() => {
+    return Object.values(activeLayers).filter(Boolean).length;
+  }, [activeLayers]);
+
+  // Mutual exclusion on mobile (< 640px) to prevent bottom panels collision
+  const toggleVerified = useCallback(() => {
+    setIsVerifiedExpanded((prev) => {
+      const next = !prev;
+      if (next && typeof window !== 'undefined' && window.innerWidth < 640) {
+        setIsLegendExpanded(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleLegend = useCallback(() => {
+    setIsLegendExpanded((prev) => {
+      const next = !prev;
+      if (next && typeof window !== 'undefined' && window.innerWidth < 640) {
+        setIsVerifiedExpanded(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleNationwide = useCallback(() => {
+    setIsNationwideExpanded((prev) => !prev);
+  }, []);
+
+  const areAllPanelsCollapsed = !isNationwideExpanded && !isVerifiedExpanded && !isLegendExpanded;
+
+  const handleToggleAllPanels = useCallback(() => {
+    if (areAllPanelsCollapsed) {
+      setIsNationwideExpanded(true);
+      setIsVerifiedExpanded(true);
+      setIsLegendExpanded(true);
+    } else {
+      setIsNationwideExpanded(false);
+      setIsVerifiedExpanded(false);
+      setIsLegendExpanded(false);
+    }
+  }, [areAllPanelsCollapsed]);
 
   // Reset all filters and view back to India
   const resetAllFilters = () => {
@@ -478,7 +543,7 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
 
           ${isAlongRoute ? `
             <div style="background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; font-size: 10px; color: #67e8f9; font-weight: 700; display: flex; align-items: center; gap: 4px;">
-              <span>🚨</span>
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #06b6d4;"></span>
               <span>Lies Directly Along Planned Route Corridor</span>
             </div>
           ` : ''}
@@ -499,7 +564,7 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
           </div>
 
           <div style="background: rgba(12, 14, 20, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; font-size: 10.5px;">
-            <div style="color: #cbd5e1; font-weight: 600; margin-bottom: 2px;">⚠️ Primary Hazard:</div>
+            <div style="color: #cbd5e1; font-weight: 600; margin-bottom: 2px;">Primary Hazard:</div>
             <div style="color: #e2e8f0;">${hotspot.primaryCause}</div>
           </div>
 
@@ -837,7 +902,7 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
         const userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
         userMarker.bindPopup(`
           <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; padding: 4px;">
-            <strong style="color: #38bdf8;">📍 Your Current Location</strong>
+            <strong style="color: #38bdf8;">Your Current Location</strong>
             <p style="margin: 4px 0 0; color: #94a3b8; font-family: monospace;">${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E</p>
           </div>
         `).openPopup();
@@ -1023,6 +1088,22 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
               <span className="text-[11px]">{forceIndividualPins ? 'All Pins Shown' : 'Zoom Clustered'}</span>
             </button>
 
+            {/* Focus Map / Toggle Panels Mode */}
+            <button
+              type="button"
+              onClick={handleToggleAllPanels}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                areAllPanelsCollapsed
+                  ? 'bg-brand-orange/20 text-brand-orange border-brand-orange/40'
+                  : 'bg-charcoal-850 text-slate-300 border-charcoal-750 hover:bg-charcoal-800'
+              }`}
+              title={areAllPanelsCollapsed ? 'Restore all map overlay panels' : 'Focus map view (collapse all overlays)'}
+              aria-label={areAllPanelsCollapsed ? 'Restore all map overlay panels' : 'Focus map view (collapse all overlays)'}
+            >
+              {areAllPanelsCollapsed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="text-[11px]">{areAllPanelsCollapsed ? 'Panels Hidden' : 'Focus Map'}</span>
+            </button>
+
             {/* Reset Filters Button */}
             {isFiltered && (
               <button
@@ -1045,13 +1126,13 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
         
         {/* Left Map Viewport (8 Columns on Large Screens) */}
-        <div className="lg:col-span-8 relative bg-[#0c0e14] overflow-hidden border-b lg:border-b-0 lg:border-r border-charcoal-750/80 min-h-[480px] lg:min-h-[580px] flex flex-col">
+        <div className="lg:col-span-8 relative bg-[#0c0e14] overflow-hidden border-b lg:border-b-0 lg:border-r border-charcoal-750/80 min-h-[500px] sm:min-h-[560px] lg:min-h-[620px] flex flex-col">
           
           {/* Leaflet Map DOM Container */}
           <div 
             ref={mapContainerRef} 
             className="w-full h-full flex-1 z-0" 
-            style={{ minHeight: '480px' }}
+            style={{ minHeight: '500px' }}
           />
 
           {/* Geolocation Notice Banner */}
@@ -1070,71 +1151,123 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
           )}
 
           {/* Overlay 1: Top-Left Location Header & Hazard Category Filter Checkboxes */}
-          <div className="absolute top-4 left-4 z-20 max-w-sm pointer-events-auto bg-charcoal-900/92 backdrop-blur-xl border border-charcoal-750/90 p-4 rounded-2xl shadow-card-dark">
-            
-            {/* Location Title & Subtitle */}
-            <div className="mb-3 border-b border-charcoal-800 pb-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center space-x-2">
-                  <span>Nationwide Blackspot Intelligence</span>
-                </h4>
-                <span className="text-[10px] font-mono text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded-full border border-brand-orange/20 font-bold">
-                  {selectedState === 'ALL' ? 'India GIS Grid' : selectedState}
-                </span>
-              </div>
-              <p className="text-[11px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">
-                MoRTH Official • NHAI Blackspots
-              </p>
-            </div>
-
-            {/* Checkbox Filter Options (6 Functional Categories) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 text-xs">
-              {HAZARD_CATEGORIES.map((cat) => {
-                const isActive = activeLayers[cat.key];
-                return (
-                  <label
-                    key={cat.key}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleLayer(cat.key);
-                    }}
-                    className="flex items-center space-x-2 cursor-pointer group select-none"
-                  >
-                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center transition-all ${
-                      isActive 
-                        ? 'bg-brand-orange text-white shadow-glow-orange' 
-                        : 'border border-slate-600 bg-charcoal-950'
-                    }`}>
-                      {isActive && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-20 pointer-events-auto transition-all duration-200">
+            {isNationwideExpanded ? (
+              <div className="w-[calc(100vw-5rem)] max-w-sm bg-charcoal-900/95 backdrop-blur-xl border border-charcoal-750/90 p-3.5 sm:p-4 rounded-2xl shadow-card-dark max-h-[70vh] overflow-y-auto">
+                {/* Location Title & Subtitle + Collapse Control */}
+                <div className="mb-3 border-b border-charcoal-800 pb-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center space-x-2">
+                        <span>Nationwide Blackspot Intelligence</span>
+                      </h4>
+                      <p className="text-[11px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">
+                        MoRTH Official • NHAI Blackspots
+                      </p>
                     </div>
-                    <span className={`text-[11px] transition-colors truncate ${
-                      isActive ? 'text-slate-100 font-medium' : 'text-slate-400 group-hover:text-slate-300'
-                    }`} title={cat.label}>
-                      {cat.shortLabel || cat.label}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <span className="text-[10px] font-mono text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded-full border border-brand-orange/20 font-bold whitespace-nowrap">
+                        {selectedState === 'ALL' ? 'India GIS Grid' : selectedState}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={toggleNationwide}
+                        aria-label="Collapse Nationwide Blackspot Intelligence panel"
+                        aria-expanded={true}
+                        title="Collapse panel"
+                        className="p-1 rounded-lg bg-charcoal-800/80 hover:bg-charcoal-750 text-slate-400 hover:text-white border border-charcoal-700/60 transition cursor-pointer shrink-0 focus:outline-none focus:ring-1 focus:ring-brand-orange"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Zoom hint badge */}
-            <div className="mt-2.5 pt-2 border-t border-charcoal-800/80 flex items-center justify-between text-[10px] text-slate-400">
-              <span>Zoom: {currentZoom}x {currentZoom < 7 ? '(State Badges)' : '(Individual Pins)'}</span>
-              {isFiltered && (
-                <button
-                  onClick={resetAllFilters}
-                  className="text-brand-orange hover:text-orange-300 font-semibold flex items-center space-x-1 transition"
-                >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset</span>
-                </button>
-              )}
-            </div>
+                {/* Checkbox Filter Options (6 Functional Categories) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                  {HAZARD_CATEGORIES.map((cat) => {
+                    const isActive = activeLayers[cat.key];
+                    return (
+                      <label
+                        key={cat.key}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleLayer(cat.key);
+                        }}
+                        className="flex items-center space-x-2 cursor-pointer group select-none"
+                      >
+                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center transition-all ${
+                          isActive 
+                            ? 'bg-brand-orange text-white shadow-glow-orange' 
+                            : 'border border-slate-600 bg-charcoal-950'
+                        }`}>
+                          {isActive && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className={`text-[11px] transition-colors truncate ${
+                          isActive ? 'text-slate-100 font-medium' : 'text-slate-400 group-hover:text-slate-300'
+                        }`} title={cat.label}>
+                          {cat.shortLabel || cat.label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
 
+                {/* Zoom hint badge */}
+                <div className="mt-2.5 pt-2 border-t border-charcoal-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                  <span>Zoom: {currentZoom}x {currentZoom < 7 ? '(State Badges)' : '(Individual Pins)'}</span>
+                  {isFiltered && (
+                    <button
+                      type="button"
+                      onClick={resetAllFilters}
+                      className="text-brand-orange hover:text-orange-300 font-semibold flex items-center space-x-1 transition"
+                    >
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      <span>Reset</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleNationwide}
+                aria-label="Expand Nationwide Blackspot Intelligence panel"
+                aria-expanded={false}
+                title="Expand Nationwide Blackspot Intelligence"
+                className="group flex items-center space-x-2 px-3 py-2 rounded-xl bg-charcoal-900/95 hover:bg-charcoal-850 backdrop-blur-xl border border-charcoal-750/90 shadow-card-dark text-slate-200 hover:text-white transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-orange"
+              >
+                <div className="w-2 h-2 rounded-full bg-brand-orange animate-pulse shrink-0" />
+                <span className="text-xs font-bold text-white tracking-tight">Nationwide Blackspots</span>
+                <span className="text-[10px] font-mono text-brand-orange bg-brand-orange/10 px-1.5 py-0.5 rounded-md border border-brand-orange/20 font-bold whitespace-nowrap">
+                  {selectedState === 'ALL' ? `${activeCategoriesCount}/6` : selectedState}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform group-hover:translate-y-0.5 shrink-0" />
+              </button>
+            )}
           </div>
 
           {/* Overlay 2: Floating Custom Map Control Buttons (Top-Right of Map) */}
-          <div className="absolute top-4 right-4 z-20 flex flex-col space-y-1.5 pointer-events-auto">
+          <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-col space-y-1.5 pointer-events-auto">
+            {/* Focus Map Mode / Toggle All Overlays */}
+            <button
+              type="button"
+              onClick={handleToggleAllPanels}
+              title={areAllPanelsCollapsed ? 'Restore All Overlay Panels' : 'Focus Map (Collapse All Overlays)'}
+              aria-label={areAllPanelsCollapsed ? 'Restore All Overlay Panels' : 'Focus Map (Collapse All Overlays)'}
+              className={`w-8 h-8 rounded-xl backdrop-blur-md flex items-center justify-center shadow-lg transition cursor-pointer border ${
+                areAllPanelsCollapsed
+                  ? 'bg-brand-orange text-white border-brand-orange shadow-glow-orange'
+                  : 'bg-charcoal-900/90 hover:bg-charcoal-800 text-slate-300 hover:text-white border-charcoal-750'
+              }`}
+            >
+              {areAllPanelsCollapsed ? (
+                <EyeOff className="w-4 h-4 text-white" />
+              ) : (
+                <Eye className="w-4 h-4 text-slate-300" />
+              )}
+            </button>
+
             {/* Zoom In */}
             <button
               onClick={() => mapInstanceRef.current?.zoomIn()}
@@ -1297,103 +1430,167 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
           )}
 
           {/* Overlay 3: Bottom-Left Map Legend & Geo-Grid Coordinates */}
-          <div className="absolute bottom-4 left-4 z-20 pointer-events-auto bg-charcoal-900/90 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-charcoal-750 shadow-xl hidden sm:block">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-bold">
-              Risk &amp; Route Legend
-            </span>
-            <div className="flex items-center space-x-3 text-[11px]">
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-glow-red"></span>
-                <span className="text-slate-300">Severe</span>
+          <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-20 pointer-events-auto transition-all duration-200">
+            {isLegendExpanded ? (
+              <div className="bg-charcoal-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-charcoal-750 shadow-xl max-w-[calc(100vw-2rem)] sm:max-w-xs transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">
+                    Risk &amp; Route Legend
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleLegend}
+                    aria-label="Collapse Risk & Route Legend panel"
+                    aria-expanded={true}
+                    title="Collapse legend"
+                    className="p-1 rounded-md bg-charcoal-800/80 hover:bg-charcoal-750 text-slate-400 hover:text-white border border-charcoal-700/60 transition cursor-pointer ml-2 focus:outline-none focus:ring-1 focus:ring-brand-orange"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex items-center space-x-3 text-[11px] flex-wrap gap-y-1">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-glow-red"></span>
+                    <span className="text-slate-300">Severe</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-glow-orange"></span>
+                    <span className="text-slate-300">High</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-glow-cyan"></span>
+                    <span className="text-cyan-300 font-semibold">Planned Route</span>
+                  </div>
+                </div>
+                {/* Geo-Grid Coordinates Badge */}
+                <div className="mt-2 pt-1.5 border-t border-charcoal-800 flex items-center space-x-1.5 text-[10px] font-mono text-slate-400 truncate max-w-[260px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                  <span className="truncate">GRID: {selectedHotspot ? selectedHotspot.coordinates : '22.9734° N, 78.6569° E (India Centroid)'}</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-glow-orange"></span>
-                <span className="text-slate-300">High</span>
-              </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-glow-cyan"></span>
-                <span className="text-cyan-300 font-semibold">Planned Route</span>
-              </div>
-            </div>
-            {/* Geo-Grid Coordinates Badge */}
-            <div className="mt-2 pt-1.5 border-t border-charcoal-800 flex items-center space-x-1.5 text-[10px] font-mono text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>GRID: {selectedHotspot ? selectedHotspot.coordinates : '22.9734° N, 78.6569° E (India Centroid)'}</span>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleLegend}
+                aria-label="Expand Risk & Route Legend panel"
+                aria-expanded={false}
+                title="Expand Risk & Route Legend"
+                className="group flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-charcoal-900/95 hover:bg-charcoal-850 backdrop-blur-md border border-charcoal-750/90 shadow-xl text-slate-200 hover:text-white transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-orange"
+              >
+                <div className="flex items-center -space-x-1 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-red-500 border border-charcoal-900"></span>
+                  <span className="w-2 h-2 rounded-full bg-orange-500 border border-charcoal-900"></span>
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 border border-charcoal-900"></span>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-300 group-hover:text-white">Legend</span>
+                <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform group-hover:-translate-y-0.5 shrink-0" />
+              </button>
+            )}
           </div>
 
           {/* Overlay 4: Bottom-Right Compact Dynamic Analytics HUD Panel */}
-          <div className="absolute bottom-4 right-4 z-20 w-72 sm:w-80 charcoal-card-elevated p-4 rounded-2xl shadow-card-dark border border-white/10 pointer-events-auto backdrop-blur-2xl">
-            
-            {/* Header: Visible Count & Breakdown */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-charcoal-750/80 mb-3">
-              <div>
-                <span className="text-xs font-bold text-white tracking-tight flex items-center space-x-1.5">
-                  <Activity className="w-3.5 h-3.5 text-brand-orange" />
-                  <span>Verified Blackspots: {stats.totalVisible}</span>
+          <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-20 pointer-events-auto transition-all duration-200">
+            {isVerifiedExpanded ? (
+              <div className="w-[calc(100vw-2rem)] max-w-[300px] sm:max-w-none sm:w-80 charcoal-card-elevated p-3.5 sm:p-4 rounded-2xl shadow-card-dark border border-white/10 backdrop-blur-2xl max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
+                {/* Header: Visible Count & Breakdown + Collapse Button */}
+                <div className="flex items-start justify-between pb-2.5 border-b border-charcoal-750/80 mb-3 gap-2">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-white tracking-tight flex items-center space-x-1.5">
+                      <Activity className="w-3.5 h-3.5 text-brand-orange shrink-0" />
+                      <span className="truncate">Verified Blackspots: {stats.totalVisible}</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                      {stats.highRiskCount} High • {stats.mediumRiskCount} Med • {stats.lowRiskCount} Low
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    <span className="font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-charcoal-800 text-brand-orange border border-charcoal-700 whitespace-nowrap">
+                      MoRTH BENCHMARK
+                    </span>
+                    <button
+                      type="button"
+                      onClick={toggleVerified}
+                      aria-label="Collapse Verified Blackspots panel"
+                      aria-expanded={true}
+                      title="Collapse panel"
+                      className="p-1 rounded-lg bg-charcoal-800/80 hover:bg-charcoal-750 text-slate-400 hover:text-white border border-charcoal-700/60 transition cursor-pointer shrink-0 focus:outline-none focus:ring-1 focus:ring-brand-orange"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Category Distribution Bars */}
+                <div className="space-y-2.5 text-xs">
+                  {/* Dangerous Intersections */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-300">Dangerous intersections</span>
+                      <span className="font-mono font-bold text-red-400">{stats.categoryPercentages.dangerous_intersections || 0}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-red-600 to-red-400 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, stats.categoryPercentages.dangerous_intersections || 0)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Speed Hazards / Distractions */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-300">Speed differential hazards</span>
+                      <span className="font-mono font-bold text-brand-orange">{stats.categoryPercentages.distraction_hazards || 0}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-600 to-brand-orange rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, stats.categoryPercentages.distraction_hazards || 0)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Traffic Congestion */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-300">Freight &amp; bottlenecks</span>
+                      <span className="font-mono font-bold text-amber-400">{stats.categoryPercentages.traffic_congestion || 0}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, stats.categoryPercentages.traffic_congestion || 0)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footnote: Transparent benchmark info */}
+                <div className="mt-3 pt-2 border-t border-charcoal-750/70 flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="truncate max-w-[190px]">Formula: 0.4*Fat + 0.3*Acc + 0.2*Sev</span>
+                  <span className="font-mono text-[9.5px] text-emerald-400">EMPIRICAL</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleVerified}
+                aria-label="Expand Verified Blackspots panel"
+                aria-expanded={false}
+                title="Expand Verified Blackspots Analytics"
+                className="group flex items-center space-x-2 px-3 py-2 rounded-xl bg-charcoal-900/95 hover:bg-charcoal-850 backdrop-blur-xl border border-charcoal-750/90 shadow-card-dark text-slate-200 hover:text-white transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-orange"
+              >
+                <Activity className="w-3.5 h-3.5 text-brand-orange shrink-0" />
+                <span className="text-xs font-bold text-white tracking-tight">Verified: {stats.totalVisible}</span>
+                <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                  ({stats.highRiskCount}H • {stats.mediumRiskCount}M)
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {stats.highRiskCount} High • {stats.mediumRiskCount} Med • {stats.lowRiskCount} Low
+                <span className="font-mono text-[8.5px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-charcoal-800 text-brand-orange border border-charcoal-700">
+                  MoRTH
                 </span>
-              </div>
-              <span className="font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-charcoal-800 text-brand-orange border border-charcoal-700">
-                MoRTH BENCHMARK
-              </span>
-            </div>
-
-            {/* Category Distribution Bars */}
-            <div className="space-y-2.5 text-xs">
-              
-              {/* Dangerous Intersections */}
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-300">Dangerous intersections</span>
-                  <span className="font-mono font-bold text-red-400">{stats.categoryPercentages.dangerous_intersections || 0}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-red-600 to-red-400 rounded-full transition-all duration-500" 
-                    style={{ width: `${Math.min(100, stats.categoryPercentages.dangerous_intersections || 0)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Speed Hazards / Distractions */}
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-300">Speed differential hazards</span>
-                  <span className="font-mono font-bold text-brand-orange">{stats.categoryPercentages.distraction_hazards || 0}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-orange-600 to-brand-orange rounded-full transition-all duration-500" 
-                    style={{ width: `${Math.min(100, stats.categoryPercentages.distraction_hazards || 0)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Traffic Congestion */}
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-300">Freight &amp; bottlenecks</span>
-                  <span className="font-mono font-bold text-amber-400">{stats.categoryPercentages.traffic_congestion || 0}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-charcoal-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-500" 
-                    style={{ width: `${Math.min(100, stats.categoryPercentages.traffic_congestion || 0)}%` }}
-                  />
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footnote: Transparent benchmark info */}
-            <div className="mt-3 pt-2 border-t border-charcoal-750/70 flex items-center justify-between text-[10px] text-slate-400">
-              <span className="truncate max-w-[190px]">Formula: 0.4*Fat + 0.3*Acc + 0.2*Sev</span>
-              <span className="font-mono text-[9.5px] text-emerald-400">EMPIRICAL</span>
-            </div>
-
+                <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform group-hover:-translate-y-0.5 shrink-0" />
+              </button>
+            )}
           </div>
 
           {/* Empty State Banner if all filtered out */}
@@ -1522,12 +1719,12 @@ export function AccidentHotspotsMap({ onSelectHotspot }) {
                 </p>
                 {selectedHotspot.hazardType && (
                   <p className="text-[11px] text-slate-300 mt-1 font-mono">
-                    ⚠️ Mechanism: {selectedHotspot.hazardType}
+                    Hazard Classification: {selectedHotspot.hazardType}
                   </p>
                 )}
                 {selectedHotspot.weatherImpact && (
                   <p className="text-[11px] text-amber-400/90 mt-1 font-medium">
-                    🌧️ Environmental factor: {selectedHotspot.weatherImpact}
+                    Environmental Factor: {selectedHotspot.weatherImpact}
                   </p>
                 )}
               </div>

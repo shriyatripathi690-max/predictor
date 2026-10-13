@@ -7,6 +7,9 @@
  * 3. Calculation of Haversine distances and estimated transit durations.
  */
 
+const NOMINATIM_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_NOMINATIM_URL) || 'https://nominatim.openstreetmap.org';
+const OSRM_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OSRM_ROUTER_URL) || 'https://router.project-osrm.org';
+
 // Regional Gazetteer of known landmarks along the NH-48 / NCR Corridor
 const REGIONAL_GAZETTEER = [
   {
@@ -131,7 +134,7 @@ export async function geocodeLocation(query) {
     const timeout = setTimeout(() => controller.abort(), 3500);
 
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      `${NOMINATIM_BASE_URL}/search?format=json&q=${encodeURIComponent(
         queryStr
       )}&limit=1&addressdetails=1`,
       {
@@ -220,7 +223,7 @@ export async function calculateDrivableRoute(origin, destination) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
 
-    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=full&geometries=geojson`;
+    const url = `${OSRM_BASE_URL}/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=full&geometries=geojson`;
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeout);
 

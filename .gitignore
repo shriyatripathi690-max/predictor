@@ -15,9 +15,16 @@ __pycache__/
 # Environment variables & secrets
 .env
 .env.*
+!.env.example
 *.env
 *.pem
 *.key
+*.cert
+*.crt
+*.pfx
+*.p12
+id_rsa*
+id_ed25519*
 
 # Build outputs
 dist/

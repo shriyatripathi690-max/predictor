@@ -1,10 +1,52 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, ShieldAlert, Route, AlertOctagon, CheckCircle2 } from 'lucide-react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  CarFront, 
+  HeartPulse, 
+  MapPin, 
+  Gauge, 
+  ShieldAlert, 
+  Route, 
+  AlertOctagon, 
+  CheckCircle2 
+} from 'lucide-react';
 
 export function MetricCard({ metric }) {
-  const { title, value, subtext, change, isPositive, status, badgeText, onClick } = metric;
+  const { title, value, subtext, change, isPositive, status, badgeText, onClick, icon: CustomIcon } = metric;
 
-  const getStatusIcon = () => {
+  const getCardIcon = () => {
+    // 1. If explicit icon provided on metric
+    if (CustomIcon) {
+      let iconColor = 'text-brand-orange';
+      if (metric.id === 'route_fatal_accidents' || status === 'severe') {
+        iconColor = 'text-red-400';
+      } else if (metric.id === 'route_verified_blackspots') {
+        iconColor = 'text-amber-400';
+      } else if (metric.id === 'route_risk_score') {
+        iconColor = status === 'severe' ? 'text-red-400' : status === 'moderate' ? 'text-amber-400' : 'text-emerald-400';
+      } else if (status === 'safe') {
+        iconColor = 'text-emerald-400';
+      }
+      return <CustomIcon className={`w-5 h-5 ${iconColor}`} />;
+    }
+
+    // 2. Identify by ID or title for distinct meaningful iconography
+    if (metric.id === 'route_total_accidents' || (title && title.includes('Total') && title.includes('Accident'))) {
+      return <CarFront className="w-5 h-5 text-brand-orange" />;
+    }
+    if (metric.id === 'route_fatal_accidents' || (title && title.includes('Fatal'))) {
+      return <HeartPulse className="w-5 h-5 text-red-400" />;
+    }
+    if (metric.id === 'route_verified_blackspots' || (title && title.includes('Blackspot'))) {
+      return <MapPin className="w-5 h-5 text-amber-400" />;
+    }
+    if (metric.id === 'route_risk_score' || (title && title.includes('Risk Score'))) {
+      const riskColor = status === 'severe' ? 'text-red-400' : status === 'moderate' ? 'text-amber-400' : 'text-emerald-400';
+      return <Gauge className={`w-5 h-5 ${riskColor}`} />;
+    }
+
+    // Fallback status icon
     switch (status) {
       case 'severe':
         return <AlertOctagon className="w-5 h-5 text-red-400" />;
@@ -55,7 +97,7 @@ export function MetricCard({ metric }) {
       {/* Top Row: Icon and optional status badge */}
       <div className="flex items-center justify-between mb-3.5">
         <div className="p-2.5 rounded-xl bg-charcoal-900 border border-charcoal-750/80 group-hover:scale-105 transition-transform">
-          {getStatusIcon()}
+          {getCardIcon()}
         </div>
 
         {badgeText && (

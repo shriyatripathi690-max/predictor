@@ -6,7 +6,7 @@
  * 1. Uses genuine Open-Meteo atmospheric telemetry.
  * 2. Uses verified historical hotspot coordinates from regional dataset.
  * 3. Uses client-side Highway Safety Manual (AASHTO) calibrated heuristics.
- * 4. Transparently marks missing live traffic & municipal incident feeds as unavailable.
+ * 4. Active advisories focus exclusively on validated telemetry and verified safety heuristics.
  */
 
 import { SAMPLE_HOTSPOTS } from '../data/sampleData.js';
@@ -345,34 +345,6 @@ export async function analyzeRouteRisk(routeData, origin, destination, customHot
     actionableAdvice: circadian.timeOfDay === 'late_night'
       ? 'Ensure full low-beam engagement. Take rest breaks if driving continuously beyond 90 minutes.'
       : 'Standard daytime vigilance recommended.',
-  });
-
-  // D. Live Traffic & Congestion Stream (Transparent Availability Disclosure)
-  alerts.push({
-    id: 'alert-traffic-unavail',
-    category: 'Traffic Congestion Advisory',
-    title: 'Live Enterprise Traffic Feed: Disconnected',
-    severity: 'Unavailable',
-    severityColor: 'border-charcoal-700 text-slate-400 bg-charcoal-850/60',
-    affectedSegment: 'Route Network',
-    explanation: 'Enterprise traffic telemetry API (TomTom / Google Roads) is not configured in this frontend client. In accordance with SafeRoad integrity standards, synthetic congestion is not simulated.',
-    dataSource: 'Third-Party Traffic Telemetry (Unconfigured)',
-    timestamp: 'Feature Offline',
-    actionableAdvice: 'Refer to local municipal VMS overhead displays and navigation units for real-time congestion.',
-  });
-
-  // E. Road Closure & Incident Dispatch (Transparent Availability Disclosure)
-  alerts.push({
-    id: 'alert-incident-unavail',
-    category: 'Road Incident & Closure Alert',
-    title: 'Municipal Incident Stream: Disconnected',
-    severity: 'Unavailable',
-    severityColor: 'border-charcoal-700 text-slate-400 bg-charcoal-850/60',
-    affectedSegment: 'Corridor Network',
-    explanation: 'Live Department of Transportation (DOT) emergency closure & detour dispatch stream is not connected. Relying on verified static road geometry.',
-    dataSource: 'Municipal Incident Dispatch Feed (Unconfigured)',
-    timestamp: 'Feature Offline',
-    actionableAdvice: 'SafeRoad does not fabricate emergency road closures without verified public safety feeds.',
   });
 
   // 6. Overall Composite Route Risk

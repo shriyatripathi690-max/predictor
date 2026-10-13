@@ -449,11 +449,11 @@ export function RiskAnalysisForm({ onAnalyze, isAnalyzing }) {
                 onChange={handleChange}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-charcoal-900 border border-charcoal-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange/40 focus:border-brand-orange appearance-none transition-all cursor-pointer"
               >
-                <option value="clear">☀️ Clear &amp; Dry</option>
-                <option value="light_rain">🌦️ Light Rain / Drizzle</option>
-                <option value="heavy_rain">🌧️ Heavy Downpour / Monsoon</option>
-                <option value="dense_fog">🌫️ Dense Fog / Severe Haze</option>
-                <option value="snow_ice">❄️ Snow / Freezing Sleet</option>
+                <option value="clear">Clear &amp; Dry</option>
+                <option value="light_rain">Light Rain / Drizzle</option>
+                <option value="heavy_rain">Heavy Downpour / Monsoon</option>
+                <option value="dense_fog">Dense Fog / Severe Haze</option>
+                <option value="snow_ice">Snow / Freezing Sleet</option>
               </select>
               <CloudRain className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
             </div>

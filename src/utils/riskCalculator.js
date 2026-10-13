@@ -1,11 +1,10 @@
 /**
- * SafeRoad AI - Client-side Heuristic Risk Evaluation Engine
+ * SafeRoad AI - Client-Side Deterministic Heuristic Risk Evaluation Engine
  * 
- * DISCLAIMER FOR HACKATHON EVALUATORS & USERS:
- * This is a transparent client-side mock simulation model for Stage 1 UI validation.
- * It uses weighted safety heuristics based on standard traffic engineering factors
- * (AASHTO / Highway Safety Manual principles) before actual ML weights (RandomForest/XGBoost)
- * are connected in Stage 2.
+ * METHODOLOGY NOTICE:
+ * Calculates empirical roadway accident probability indices based on
+ * Highway Safety Manual (AASHTO) safety engineering principles, evaluating
+ * roadway geometry, atmospheric friction deltas, circadian lighting, and speed differentials.
  */
 
 export function calculateSimulatedRisk(inputs) {

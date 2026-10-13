@@ -1,25 +1,27 @@
-# SafeRoad AI — Road Accident Risk Prediction & Safety Analytics Dashboard
+# SafeRoad AI: Road Accident Risk Prediction & Safety Analytics Dashboard
 
-> **Hackathon Prototype — Stage 1 Frontend**  
-> An AI-powered decision support and risk prediction interface for roadway safety management.
+> **Road Safety Intelligence & Decision Support Platform**  
+> An engineering platform evaluating historical road collision patterns, verified highway blackspots, and empirical risk heuristics based on official MoRTH benchmarks.
 
 ---
 
-## 🚦 Overview
+## 🚦 Platform Overview
 
-This project is the Stage 1 frontend prototype for a hackathon. It provides a modern, responsive user interface to visualize roadway accident risks, simulate hazard conditions, inspect accident blackspots on an interactive GIS map, and review historical collision analytics.
+SafeRoad AI is a modern roadway safety intelligence web application. It provides interactive GIS mapping of nationwide highway blackspots, route corridor spatial matching, dynamic scenario hazard evaluations, and comprehensive historical accident analytics derived from official Ministry of Road Transport and Highways (MoRTH, Government of India) reports.
 
-> **Note on Data & Models:**  
-> All data displayed in Stage 1 is **clearly labelled sample benchmark data**. No live traffic API or trained machine learning model is connected yet. Risk calculations are performed transparently using traffic engineering heuristic weights. Real ML inference (e.g. XGBoost/RandomForest) is slated for Stage 2.
+> **Data & Empirical Methodology Notice:**  
+> Historical crash statistics and blackspot coordinates are derived from official MoRTH multi-year reports (2018–2022) and NHAI registries. Corridor risk scores are calculated transparently using Highway Safety Manual (AASHTO) safety engineering heuristic indices. All evaluations are informational statistical estimates and do not guarantee future road conditions.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Framework:** React 19 + Vite
-- **Styling:** Tailwind CSS (Dark Navy theme with subtle safety hazard accents)
-- **Charts:** Recharts
-- **Icons:** Lucide React
+- **Styling:** Vanilla CSS + Tailwind CSS (Accessible Dark Charcoal theme with safety hazard indicators)
+- **Mapping & GIS:** Leaflet + OpenStreetMap + OSRM routing
+- **Charts & Visualizations:** Recharts
+- **Icons:** Lucide React (Clean SVG icon system, zero emojis)
+- **Data Parsing:** PapaParse for client-side CSV validation
 
 ---
 
@@ -29,23 +31,47 @@ This project is the Stage 1 frontend prototype for a hackathon. It provides a mo
 predictor/
 ├── src/
 │   ├── components/
-│   │   ├── Navbar.jsx               # Brand header, navigation links, and simulated alert notification badge
-│   │   ├── SafetyAlertsBanner.jsx   # Top dismissible simulated alert advisory stream
-│   │   ├── MetricCard.jsx           # Reusable KPI metric card with sample benchmark labels and trends
-│   │   ├── RiskAnalysisForm.jsx     # Interactive roadway risk evaluation form with 1-click test scenarios
-│   │   ├── RiskResultCard.jsx       # Dynamic risk score meter (0-100), hazard factors, and prescriptive actions
-│   │   ├── AccidentHotspotsMap.jsx  # Interactive GIS grid placeholder with selectable accident pins & inspector
-│   │   ├── HistoricalTrends.jsx     # Interactive charts for 12-month trends, circadian risk curves, and root causes
-│   │   └── Footer.jsx               # Project metadata, hackathon disclosure, and technology badges
-│   ├── data/
-│   │   └── sampleData.js            # Simulated datasets (metrics, hotspots, historical trends, presets)
+│   │   ├── Navbar.jsx               # Brand header, module navigation, and dataset import trigger
+│   │   ├── Sidebar.jsx              # Compact desktop quick-access navigation rail
+│   │   ├── SafetyAlertsBanner.jsx   # Informational advisory alerts stream
+│   │   ├── RouteAnalyticsBar.jsx    # Corridor selector, buffer distance (2-15 km), and period filter
+│   │   ├── MetricCard.jsx           # Reusable KPI card with status indicators and trend deltas
+│   │   ├── RiskAnalysisForm.jsx     # Interactive roadway hazard evaluation form with quick scenarios
+│   │   ├── RiskResultCard.jsx       # Risk score gauge (0-100), factor contributions, and safety advisories
+│   │   ├── MissionStatement.jsx     # Platform purpose statement with high-contrast road vector visual
+│   │   ├── AccidentHotspotsMap.jsx  # Interactive Leaflet GIS map with NHAI blackspots and state benchmarks
+│   │   ├── JourneySafetyMode.jsx    # Custom route planner with OSRM geometry and corridor telemetry
+│   │   ├── HistoricalTrends.jsx     # Official MoRTH multi-year trends, state comparisons, and circadian curves
+│   │   ├── MonitoredCorridorsModal.jsx # Predefined highway corridor trajectory breakdown
+│   │   ├── DatasetImportModal.jsx   # Custom CSV dataset upload, schema validation, and benchmark management
+│   │   ├── PrivacyPolicyModal.jsx   # Dedicated accessible Privacy Policy and data handling disclosure
+│   │   ├── TermsConditionsModal.jsx # Dedicated Terms and Conditions with road safety disclaimers
+│   │   ├── Footer.jsx               # Platform navigation, legal links, attributions, and copyright
+│   │   └── ErrorBoundary.jsx        # Component-level error recovery wrappers
+│   ├── context/
+│   │   └── JourneyContext.jsx       # State synchronization across routing, metrics, and spatial matcher
+│   ├── services/
+│   │   ├── blackspotDataService.js  # Curated NHAI blackspot registry with geospatial coordinates
+│   │   ├── corridorService.js       # Predefined highway trajectories
+│   │   ├── dataValidator.js         # CSV schema validator and sample template generator
+│   │   ├── hotspotService.js        # Blackspot clustering and query utilities
+│   │   ├── morthDataService.js      # Official MoRTH 2018–2022 national and state crash datasets
+│   │   ├── routeAccidentMatcher.js  # Haversine spatial buffer matcher linking routes to historical crashes
+│   │   └── routingService.js        # OSRM public API integration with offline fallback
 │   ├── utils/
-│   │   └── riskCalculator.js        # Deterministic client-side heuristic risk scoring engine for Stage 1
-│   ├── App.jsx                      # Main dashboard layout coordinating state and interactions
-│   ├── index.css                    # Tailwind CSS base styles and dark navy theme variables
-│   └── main.jsx                     # React DOM entry point
-├── index.html                       # HTML root document with SEO metadata
-├── tailwind.config.js               # Custom navy colors and hazard palette configuration
+│   │   ├── riskCalculator.js        # AASHTO Highway Safety Manual deterministic heuristic scoring engine
+│   │   ├── routeRiskAnalyzer.js     # Multi-segment corridor risk analysis
+│   │   └── weatherService.js        # Open-Meteo atmospheric integration
+│   ├── data/
+│   │   └── sampleData.js            # Preset simulation scenarios and default corridor definitions
+│   ├── App.jsx                      # Primary layout orchestrating dashboard workflows and modals
+│   ├── index.css                    # Design system tokens, Leaflet dark theme, and slider styles
+│   └── main.jsx                     # React DOM root entry point
+├── public/
+│   ├── favicon.svg                  # Brand SVG shield favicon matching SafeRoad logo
+│   └── road_hazard_aerial.jpg       # Aerial road network illustration
+├── index.html                       # HTML root document with OpenGraph and Twitter metadata
+├── tailwind.config.js               # Tailored charcoal and hazard color tokens
 └── package.json                     # Project scripts and dependencies
 ```
 
@@ -53,28 +79,29 @@ predictor/
 
 ## 🚀 How to Run Locally
 
-### 1. Open Terminal in the Project Directory
-Make sure your terminal is inside `c:\Users\aksha\OneDrive\Desktop\predictor`.
+### 1. Install Dependencies
+```bash
+npm install
+```
 
 ### 2. Start the Development Server
-On Windows PowerShell, run:
-```powershell
-npm.cmd run dev
+```bash
+npm run dev
 ```
-*(Or in Command Prompt: `npm run dev`)*
 
 ### 3. Open in Browser
-Open your browser and navigate to:
-```
-http://localhost:5173/
+Navigate to `http://localhost:5173/` in your browser.
+
+### 4. Build for Production
+```bash
+npm run build
 ```
 
 ---
 
-## ✅ What to Verify
+## 🔒 Privacy & Legal Compliance
 
-1. **Dashboard KPI Cards:** Review the 4 route-specific historical collision cards (Total Historical Accidents, Fatal Accidents, Verified Blackspots, Route Accident Risk Score).
-2. **Quick Test Scenarios:** Click buttons like **"Monsoon Highway (Night)"** or **"Winter Foggy Bypass (Dawn)"** to automatically fill the form.
-3. **Interactive Predictor:** Adjust speed sliders, weather, or road types, and click **"Evaluate Corridor Risk Index"** to see the score meter update dynamically.
-4. **Hotspot GIS Map:** Click on any hotspot marker (e.g. `HS-01`, `HS-02`) to view its coordinates, speed limit delta, and recommended remediation, or click **"Analyze in Predictor Form"**.
-5. **Historical Analytics:** Switch between **12-Month Trend**, **Circadian Profile**, and **Root Factors** to view interactive chart data.
+SafeRoad AI is built with client-side privacy architecture:
+- **No User Tracking:** No tracking cookies, advertising pixels, or third-party behavioral analytics.
+- **Client-Side Geolocation:** User coordinates are used solely to center maps on demand and are never stored on external servers.
+- **Dedicated Legal Pages:** Accessible Privacy Policy and Terms and Conditions modals are available via the footer or URL hash (`#privacy`, `#terms`).

@@ -349,7 +349,7 @@ function RoadSafetyVisual() {
               <rect x="0" y="0" width="96" height="20" rx="10" fill="#10131d" fillOpacity="0.85" stroke="#ff9800" strokeOpacity="0.3" strokeWidth="0.8" />
               <circle cx="10" cy="10" r="2.5" fill="#10b981" />
               <text x="18" y="13" fill="#e2e8f0" fontSize="7.5" fontWeight="700" letterSpacing="0.06em" fontFamily="monospace">
-                LIVE HORIZON
+                CORRIDOR HORIZON
               </text>
             </g>
           </g>
@@ -366,13 +366,6 @@ function RoadSafetyVisual() {
 
         </g>
       </svg>
-
-      {/* Floating Status Badge in Top-Right Corner */}
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center space-x-2 px-3 py-1.5 rounded-full bg-charcoal-900/85 border border-charcoal-750/90 backdrop-blur-md text-[11px] font-mono text-slate-300 shadow-lg">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="font-semibold text-slate-200">AI TELEMETRY MESH</span>
-        <span className="text-[10px] text-brand-orange pl-1 font-bold">ONLINE</span>
-      </div>
     </div>
   );
 }
@@ -380,8 +373,8 @@ function RoadSafetyVisual() {
 /**
  * SafeRoad AI - Brand Mission Statement
  * Premium Two-Column Layout:
- * - Left side (45%): High-impact mission headline & purpose statement
- * - Right side (55%): Cinematic glowing 3D road vector visualization
+ * - Left side (48%): High-impact mission headline & purpose statement
+ * - Right side (52%): Cinematic road vector visualization
  */
 export function MissionStatement({ className = '' }) {
   return (
@@ -390,17 +383,17 @@ export function MissionStatement({ className = '' }) {
     >
       {/* Ambient warm radial glow in the upper-left */}
       <div 
-        className="absolute -top-32 -left-32 w-96 h-96 rounded-full pointer-events-none opacity-25 blur-3xl"
+        className="absolute -top-32 -left-32 w-96 h-96 rounded-full pointer-events-none opacity-20 blur-3xl"
         style={{
-          background: 'radial-gradient(circle, rgba(255, 106, 0, 0.45) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(255, 106, 0, 0.4) 0%, transparent 70%)',
         }}
       />
 
       {/* Subtle deep amber ambient glow in the lower-right */}
       <div 
-        className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full pointer-events-none opacity-20 blur-3xl"
+        className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full pointer-events-none opacity-15 blur-3xl"
         style={{
-          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%)',
         }}
       />
 
@@ -416,46 +409,46 @@ export function MissionStatement({ className = '' }) {
       {/* Subtle top edge border accent highlight */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-orange/40 to-transparent pointer-events-none" />
 
-      {/* Main Two-Column Layout: Left (45%) & Right (55%) */}
+      {/* Main Two-Column Layout: Left (48%) & Right (52%) */}
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 xl:gap-12">
         
-        {/* LEFT COLUMN: 45% Width (Text & Brand Statement) */}
-        <div className="w-full lg:w-[45%] flex flex-col justify-between space-y-6 sm:space-y-7 shrink-0">
+        {/* LEFT COLUMN: 48% Width (Text & Brand Statement) */}
+        <div className="w-full lg:w-[48%] flex flex-col justify-between space-y-6 sm:space-y-7 shrink-0">
           
-          {/* Upper: Mission Label (Bigger, refined uppercase, elegant letter spacing, coral/amber accent) */}
+          {/* Upper: Mission Label */}
           <div className="flex items-center space-x-3.5 sm:space-x-4">
             <span 
               className="w-10 sm:w-12 lg:w-14 h-1 sm:h-[4.5px] rounded-full bg-gradient-to-r from-brand-orange via-orange-500 to-amber-400 shrink-0 shadow-sm" 
               aria-hidden="true"
             />
-            <span className="text-base sm:text-lg lg:text-[19px] xl:text-[20px] font-extrabold uppercase tracking-[0.24em] text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-400 to-amber-300 select-none pb-0.5">
+            <span className="text-sm sm:text-base lg:text-lg font-extrabold uppercase tracking-[0.22em] text-amber-400 select-none">
               OUR MISSION
             </span>
           </div>
 
-          {/* Central: High-Impact Responsive Headline without any clipping */}
-          <div className="py-1 sm:py-2">
-            <h2 className="text-3xl sm:text-4xl md:text-[42px] lg:text-[38px] xl:text-[45px] 2xl:text-[48px] font-black tracking-tight leading-[1.22] sm:leading-[1.24] lg:leading-[1.26]">
-              <span className="text-white block pb-1 sm:pb-2">
+          {/* Central: High-Impact Responsive Headline with Generous Descender Margin */}
+          <div className="py-1 sm:py-2 overflow-visible">
+            <h2 className="text-3xl sm:text-4xl md:text-[42px] lg:text-[40px] xl:text-[46px] font-black tracking-tight leading-[1.25] sm:leading-[1.28]">
+              <span className="text-white block pb-1.5 sm:pb-2">
                 Every road tells a story.
               </span>
-              <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-brand-orange via-orange-400 to-amber-300 pt-1 pb-3 sm:pb-4 pr-3">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-brand-orange via-orange-400 to-amber-300 pt-1 pb-2 sm:pb-3 overflow-visible">
                 Every insight matters.
               </span>
             </h2>
           </div>
 
-          {/* Lower: Supporting Paragraph (Readable, balanced contrast & comfortable width) */}
+          {/* Lower: Supporting Paragraph */}
           <div className="pt-5 sm:pt-6 border-t border-charcoal-750/70">
-            <p className="text-sm sm:text-base lg:text-[17px] xl:text-[18px] text-slate-200/90 font-normal leading-relaxed sm:leading-[1.7] max-w-xl">
-              We transform road-safety data into actionable understanding to help communities work toward safer roads.
+            <p className="text-sm sm:text-base lg:text-[16px] xl:text-[17px] text-slate-200/90 font-normal leading-relaxed sm:leading-[1.7] max-w-xl">
+              We transform road safety data into actionable intelligence to help communities, authorities, and drivers work toward safer roadways.
             </p>
           </div>
 
         </div>
 
-        {/* RIGHT COLUMN: 55% Width (Cinematic 3D Road-Safety Vector Visualization) */}
-        <div className="w-full lg:w-[55%] relative flex items-center justify-center">
+        {/* RIGHT COLUMN: 52% Width (Cinematic 3D Road-Safety Vector Visualization) */}
+        <div className="w-full lg:w-[52%] relative flex items-center justify-center">
           <RoadSafetyVisual />
         </div>
 

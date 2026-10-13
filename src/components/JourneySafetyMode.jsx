@@ -25,12 +25,13 @@ import {
   Droplets,
   Activity,
   AlertTriangle,
-  Clock,
   Sparkles
 } from 'lucide-react';
 import { analyzeRouteRisk, parseHotspotCoords } from '../utils/routeRiskAnalyzer.js';
 import { SAMPLE_HOTSPOTS } from '../data/sampleData.js';
 import { useJourney } from '../context/JourneyContext.jsx';
+
+const NOMINATIM_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_NOMINATIM_URL) || 'https://nominatim.openstreetmap.org';
 
 export function JourneySafetyMode() {
   const { currentJourney, planJourney, clearJourney } = useJourney();
@@ -221,7 +222,7 @@ export function JourneySafetyMode() {
         let resolvedName = `GPS Location (${lat}, ${lon})`;
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`,
+            `${NOMINATIM_BASE_URL}/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`,
             { headers: { 'Accept': 'application/json' } }
           );
           if (res.ok) {
@@ -291,7 +292,7 @@ export function JourneySafetyMode() {
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          `${NOMINATIM_BASE_URL}/search?format=json&q=${encodeURIComponent(
             value
           )}&limit=5&addressdetails=1`,
           { headers: { 'Accept': 'application/json' } }
@@ -1322,8 +1323,10 @@ export function JourneySafetyMode() {
                 <span>Active Safety Advisories & Telemetry Feed</span>
               </h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {riskAnalysisData.alerts.map((alert) => (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {riskAnalysisData.alerts
+                  .filter((alert) => alert.severity !== 'Unavailable' && !alert.id.includes('unavail'))
+                  .map((alert) => (
                   <div
                     key={alert.id}
                     className={`p-4 rounded-xl border text-xs space-y-2.5 flex flex-col justify-between ${alert.severityColor}`}
@@ -1461,7 +1464,7 @@ export function JourneySafetyMode() {
                 <div className="flex items-center space-x-2">
                   <Sparkles className="w-4 h-4 text-brand-orange" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    Explainable AI (XAI) — Factor Weight Breakdown
+                    Explainable AI (XAI): Factor Weight Breakdown
                   </h4>
                 </div>
                 <span className="text-[10px] font-mono text-slate-400">
@@ -1511,11 +1514,12 @@ export function JourneySafetyMode() {
               </div>
             </div>
 
-            {/* Background Monitoring Limitation Notice */}
-            <div className="p-3 rounded-xl bg-charcoal-850/60 border border-charcoal-750 flex items-start space-x-2 text-[11px] text-slate-400">
-              <Clock className="w-3.5 h-3.5 text-brand-orange shrink-0 mt-0.5" />
+            {/* Road Safety Intelligence Informational Banner */}
+            <div className="p-3 rounded-xl bg-charcoal-850/60 border border-charcoal-750 flex items-start space-x-2.5 text-[11px] text-slate-300 leading-relaxed">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Browser Execution Limitation:</strong> Modern browsers throttle background execution and GPS polling when this tab is minimized or the device screen enters lock mode. Keep this dashboard foregrounded for continuous telemetry updates while driving.
+                <strong className="text-white font-semibold">Road Safety Intelligence:</strong>{' '}
+                SafeRoad combines route-specific risk assessment, historical accident records, and available environmental data to support safer journey planning.
               </span>
             </div>
 

@@ -8,8 +8,7 @@ import {
   Menu, 
   X,
   BellRing,
-  Route,
-  Database
+  Route
 } from 'lucide-react';
 
 export function Navbar({ 
@@ -85,16 +84,6 @@ export function Navbar({
 
           {/* Right Action Icons & Badges */}
           <div className="flex items-center space-x-2.5">
-            {/* Dataset Integration & Import Trigger */}
-            <button
-              onClick={onOpenDatasetModal}
-              title="Official MoRTH Data & Dataset Import"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-charcoal-850 hover:bg-charcoal-800 text-slate-200 hover:text-white border border-charcoal-750 transition-colors text-xs font-semibold cursor-pointer"
-            >
-              <Database className="w-3.5 h-3.5 text-brand-orange" />
-              <span className="hidden sm:inline">Datasets &amp; Import</span>
-            </button>
-
             {/* Notification Bell Button */}
             <button
               onClick={onToggleAlerts}
@@ -141,16 +130,6 @@ export function Navbar({
               </button>
             );
           })}
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              if (onOpenDatasetModal) onOpenDatasetModal();
-            }}
-            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-charcoal-850"
-          >
-            <Database className="w-4 h-4 text-brand-orange" />
-            <span>Datasets &amp; Import</span>
-          </button>
         </div>
       )}
     </header>

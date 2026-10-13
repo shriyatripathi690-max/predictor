@@ -13,7 +13,7 @@
 
 // Storage keys
 const STORAGE_KEY_CORRIDORS_CACHE = 'saferoad_monitored_corridors_cache_v3';
-const STORAGE_KEY_CUSTOM_CORRIDORS = 'saferoad_monitored_corridors_list_v3';
+const OSRM_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OSRM_ROUTER_URL) || 'https://router.project-osrm.org';
 
 // Regional Anchor Nodes (anchored to verified NCR blackspots & arterial interchanges)
 export const CORRIDOR_NODES = {
@@ -291,7 +291,7 @@ export async function fetchOSRMCorridorRoute(origin, destination, timeoutMs = 50
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=full&geometries=geojson`;
+    const url = `${OSRM_BASE_URL}/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=full&geometries=geojson`;
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
@@ -355,7 +355,7 @@ export async function calculateAllMonitoredCorridors(corridorsList = DEFAULT_MON
   }
 
   // 2. Check cached data if not forcing fresh recalculation
-  const cached = getCachedCorridorDistances();
+  const cached = forceRefresh ? null : getCachedCorridorDistances();
 
   const calculatedCorridors = [];
   let totalMeters = 0;

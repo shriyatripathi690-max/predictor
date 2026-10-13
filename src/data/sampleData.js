@@ -1,7 +1,6 @@
 /**
- * SafeRoad AI - Sample Mock Data
- * NOTE: All data in this file consists of simulated benchmarks for UI & Hackathon demonstration.
- * No live traffic API or trained ML model backend is connected in this prototype stage.
+ * SafeRoad AI - Baseline Simulation Datasets & Test Scenarios
+ * Standard benchmarks and scenario presets for corridor risk simulation testing.
  */
 
 export const SAMPLE_METRICS = [

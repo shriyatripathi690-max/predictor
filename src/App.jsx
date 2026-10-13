@@ -14,9 +14,11 @@ import { Footer } from './components/Footer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MonitoredCorridorsModal } from './components/MonitoredCorridorsModal';
 import { DatasetImportModal } from './components/DatasetImportModal';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { TermsConditionsModal } from './components/TermsConditionsModal';
 import { JourneyProvider, useJourney } from './context/JourneyContext';
 import { calculateSimulatedRisk } from './utils/riskCalculator';
-import { Database, ShieldCheck, Route, AlertOctagon } from 'lucide-react';
+import { ShieldCheck, CarFront, HeartPulse, MapPin, Gauge } from 'lucide-react';
 
 function DashboardContent() {
   const { 
@@ -35,6 +37,22 @@ function DashboardContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCorridorModal, setShowCorridorModal] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
+  // Synchronize hash routing for legal modals (#privacy, #terms)
+  useEffect(() => {
+    const handleHash = () => {
+      if (window.location.hash === '#privacy') {
+        setShowPrivacyModal(true);
+      } else if (window.location.hash === '#terms') {
+        setShowTermsModal(true);
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   // Initial simulated evaluation state
   const initialFormState = {
@@ -147,6 +165,7 @@ function DashboardContent() {
       {
         id: 'route_total_accidents',
         title: 'Total Historical Accidents',
+        icon: CarFront,
         value: isCalculating
           ? 'Calculating...'
           : isNoRoute
@@ -166,6 +185,7 @@ function DashboardContent() {
       {
         id: 'route_fatal_accidents',
         title: 'Fatal Accidents',
+        icon: HeartPulse,
         value: isCalculating
           ? 'Calculating...'
           : isNoRoute
@@ -185,6 +205,7 @@ function DashboardContent() {
       {
         id: 'route_verified_blackspots',
         title: 'Verified Blackspots',
+        icon: MapPin,
         value: isCalculating
           ? 'Calculating...'
           : isNoRoute
@@ -204,6 +225,7 @@ function DashboardContent() {
       {
         id: 'route_risk_score',
         title: 'Route Accident Risk Score',
+        icon: Gauge,
         value: isCalculating
           ? 'Calculating...'
           : isNoRoute
@@ -290,17 +312,10 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* Dataset Management & Status Callout */}
-              <div className="shrink-0 flex flex-col sm:items-end space-y-2">
-                <button
-                  onClick={() => setShowDatasetModal(true)}
-                  className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-charcoal-900 hover:bg-charcoal-850 border border-charcoal-700 text-xs text-slate-200 hover:text-white transition cursor-pointer shadow-md"
-                >
-                  <Database className="w-3.5 h-3.5 text-brand-orange" />
-                  <span className="font-semibold">Datasets &amp; CSV Import</span>
-                </button>
-                <span className="text-[10px] text-slate-400 font-mono text-right">
-                  Provenance: {datasetSourceInfo.sourceName || 'Official MoRTH (2022)'}
+              {/* Provenance Attribution */}
+              <div className="shrink-0 flex sm:items-end self-start md:self-end">
+                <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono text-left md:text-right">
+                  Provenance: {datasetSourceInfo.sourceName || 'Official MoRTH (2022) & NHAI Blackspot Registry'}
                 </span>
               </div>
             </div>
@@ -443,7 +458,10 @@ function DashboardContent() {
         </main>
 
         {/* 8. Footer */}
-        <Footer />
+        <Footer 
+          onOpenPrivacy={() => setShowPrivacyModal(true)}
+          onOpenTerms={() => setShowTermsModal(true)}
+        />
 
       </div>
 
@@ -457,6 +475,28 @@ function DashboardContent() {
       <DatasetImportModal
         isOpen={showDatasetModal}
         onClose={() => setShowDatasetModal(false)}
+      />
+
+      {/* 11. Dedicated Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={showPrivacyModal}
+        onClose={() => {
+          setShowPrivacyModal(false);
+          if (window.location.hash === '#privacy') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
+      />
+
+      {/* 12. Dedicated Terms and Conditions Modal */}
+      <TermsConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => {
+          setShowTermsModal(false);
+          if (window.location.hash === '#terms') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
       />
 
     </div>

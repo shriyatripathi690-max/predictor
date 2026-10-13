@@ -1,16 +1,12 @@
 import React from 'react';
 import { 
   Route, 
-  MapPin, 
-  Filter, 
   SlidersHorizontal, 
   Clock, 
   AlertTriangle, 
   CheckCircle2, 
   ArrowRight,
-  ShieldCheck,
-  Compass,
-  Navigation
+  ShieldCheck
 } from 'lucide-react';
 import { useJourney } from '../context/JourneyContext.jsx';
 import { PREDEFINED_ROUTES } from '../services/routeAccidentMatcher.js';
@@ -24,8 +20,7 @@ export function RouteAnalyticsBar() {
     setBufferDistanceKm, 
     historicalPeriod, 
     setHistoricalPeriod, 
-    routeMetrics,
-    isPlanningJourney 
+    routeMetrics
   } = useJourney();
 
   return (

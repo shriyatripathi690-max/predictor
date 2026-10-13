@@ -3,6 +3,8 @@
  * Genuine real-time atmospheric data provider without synthetic fabrication.
  */
 
+const OPEN_METEO_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPEN_METEO_API_URL) || 'https://api.open-meteo.com/v1/forecast';
+
 // In-memory 5-minute cache to respect Open-Meteo rate limits
 const weatherCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -148,7 +150,7 @@ export async function fetchLiveWeather(lat, lon) {
   }
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,visibility&timezone=auto`;
+    const url = `${OPEN_METEO_BASE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,visibility&timezone=auto`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
     if (!res.ok) {
